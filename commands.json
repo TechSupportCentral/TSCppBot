@@ -1,0 +1,225 @@
+{
+  "meta": [
+    {
+      "name": "ping",
+      "description": "Test the bot latency",
+      "options": [],
+      "global": true
+    },
+    {
+      "name": "uptime",
+      "description": "See how long the bot has been online",
+      "options": [],
+      "global": true
+    },
+    {
+      "name": "commit",
+      "description": "See what git commit the bot is currently running on",
+      "options": [],
+      "global": false,
+      "admin_only": true
+    }
+  ],
+  "server_info": [
+    {
+      "name": "rules",
+      "description": "Get a list of server rules",
+      "options": [],
+      "global": false,
+      "admin_only": false,
+      "mod_only": false
+    },
+    {
+      "name": "rule",
+      "description": "Look at a specific server rule",
+      "options": [
+        {
+          "name": "rule",
+          "description": "Number of rule to look at",
+          "type": 4,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": false
+    }
+  ],
+  "db_commands": [
+    {
+      "name": "add-text-command",
+      "description": "Add a custom text-based database command",
+      "options": [
+        {
+          "name": "name",
+          "description": "Name of the command to create",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "content",
+          "description": "Text for bot to send when the command is run",
+          "type": 3,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    },
+    {
+      "name": "add-embed-command",
+      "description": "Add a custom embed-based database command",
+      "options": [
+        {
+          "name": "name",
+          "description": "Name of the command to create",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "title",
+          "description": "Title for the embed to send when the command is run",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "url",
+          "description": "URL associated with embed title",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "description",
+          "description": "Description for the embed",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "color",
+          "description": "Accent color for the embed, as a number converted from the RGB hex code",
+          "type": 4,
+          "min_value": 0,
+          "max_value": 16777215,
+          "required": false
+        },
+        {
+          "name": "thumbnail",
+          "description": "URL to image to show on the top right of the embed",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "image",
+          "description": "URL to image to show near the bottom of the embed",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "video",
+          "description": "URL to video file to play near the bottom of the embed",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "timestamp",
+          "description": "Date and time (in Unix timestamp format) to put on the bottom of the embed",
+          "type": 4,
+          "min_value": 0,
+          "required": false
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    },
+    {
+      "name": "add-embed-command-author",
+      "description": "Add author to a custom embed-based database command",
+      "options": [
+        {
+          "name": "command_name",
+          "description": "Name of the command to modify",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "name",
+          "description": "Author name",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "url",
+          "description": "URL associated with author name",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "icon_url",
+          "description": "URL to icon image to show to the left of the author name",
+          "type": 3,
+          "required": false
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    },
+    {
+      "name": "add-embed-command-footer",
+      "description": "Add footer to a custom embed-based database command",
+      "options": [
+        {
+          "name": "command_name",
+          "description": "Name of the command to modify",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "text",
+          "description": "Text to put in the embed footer",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "icon_url",
+          "description": "URL to icon image to show to the left of the footer text",
+          "type": 3,
+          "required": false
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    },
+    {
+      "name": "add-embed-command-field",
+      "description": "Add a field to a custom embed-based database command",
+      "options": [
+        {
+          "name": "command_name",
+          "description": "Name of the command to modify",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "title",
+          "description": "Title of the field",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "value",
+          "description": "Text in the field",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "inline",
+          "description": "Whether or not to line up the field with the previous field",
+          "type": 5,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    }
+  ]
+}

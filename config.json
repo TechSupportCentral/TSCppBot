@@ -1,0 +1,18 @@
+{
+  "bot_token": "Insert token here",
+  "guild_id": 854429523973636147,
+  "rules": [
+    "Be respectful to our Support Team; they provide support voluntarily for free during their own time.",
+    "Profanity is not allowed on this server. If you send a message containing profanity, it will be deleted.",
+    "We do not tolerate any form of racism, bigotry, or discrimination. This behavior will result in an immediate ban.",
+    "For faster and easier help, post your issue in a support channel and ping the Support Team. If you post your question in #general and/or don't ping the Support Team, they will not notice it and it'll take longer to get support.",
+    "All users must follow Discord TOS. https://discord.com/terms",
+    "No self promotion or advertising of any kind is allowed, especially in DMs.",
+    "Do not leak or request any personal information (IP Addresses, full names, locations, etc).",
+    "If a Support Team member is helping someone, don't try to help at the same time. If you want to help more, please apply for Support Team via our staff application forms.",
+    "English is the language used for support and discussion. Make a ticket in #report-to-moderators if you require help in another language.",
+    "We will not help you do something that is against the law. For example, we do not provide support for pirated, cracked, or hacked content, ban evasion on any platform (however unfair the ban), or bypassing a phone's iCloud/Google account lock (which probably isn't possible anyway).",
+    "Do not beg for roles. When you apply for Support Team or Moderator, we carefully consider your application based on many factors. Our decision is final, and continuing to beg for the role(s) will do the opposite of what you want, lessening the chance you'll get them in the future.",
+    "Do not post the same message in multiple channels. Find the best support channel for your question and post it to only that channel. When in doubt, use #general-support."
+  ]
+}
