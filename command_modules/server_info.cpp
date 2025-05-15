@@ -26,8 +26,7 @@ void server_info::rules(const dpp::slashcommand_t &event, const nlohmann::json &
 }
 
 void server_info::rule(const dpp::slashcommand_t &event, const nlohmann::json &config) {
-    std::cout << std::get<long long>(event.get_parameter("rule")) << std::endl;
-    long long rule = std::get<long long>(event.get_parameter("rule"));
+    long long rule = std::get<int64_t>(event.get_parameter("rule"));
     if (rule < 1 || rule > config["rules"].size()) {
         event.reply(dpp::message(std::string("There is no rule ")
                                  + std::to_string(rule) + ". There are only "

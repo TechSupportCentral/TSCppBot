@@ -14,6 +14,7 @@
  */
 #include "util.h"
 #include <map>
+#include <vector>
 
 std::string util::secondsToFancyTime(unsigned int seconds, unsigned short int granularity) {
     const std::map<const char*, int> INTERVALS = {

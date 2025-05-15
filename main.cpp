@@ -18,7 +18,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 
-#define DATA_PATH "/Users/ben/CLionProjects/TSCppBot"
+#define DATA_PATH "/path/to/TSCppBot"
 constexpr const char* DB_FILE = DATA_PATH "/TSCppBot.db";
 
 int main() {
