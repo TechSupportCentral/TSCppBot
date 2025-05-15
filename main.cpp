@@ -47,7 +47,8 @@ int main() {
 
             db_text_commands->emplace(column_values[0], text_command);
             return 0;
-        }, &db_text_commands, &error_message);
+        },
+    &db_text_commands, &error_message);
     if (error_message != nullptr) {
         std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
         sqlite3_free(error_message);
@@ -137,7 +138,9 @@ int main() {
         else if (command_name == "db-command-list") db_commands::get_commands(event, db_text_commands, db_embed_commands);
         else if (command_name == "ping") meta::ping(event);
         else if (command_name == "uptime") meta::uptime(event);
-        else if (command_name == "commit") meta::getCommit(event);
+        else if (command_name == "commit") meta::get_commit(event);
+        else if (command_name == "sendmessage") meta::send_message(event);
+        else if (command_name == "announce") meta::announce(event);
         else if (command_name == "rules") server_info::rules(event, config);
         else if (command_name == "rule") server_info::rule(event, config);
         else {

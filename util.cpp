@@ -16,64 +16,64 @@
 #include <map>
 #include <vector>
 
-std::string util::secondsToFancyTime(unsigned int seconds, unsigned short int granularity) {
+std::string util::seconds_to_fancytime(unsigned int seconds, const unsigned short int granularity) {
     const std::map<const char*, int> INTERVALS = {
         {"days", 86400},
         {"hours", 3600},
         {"minutes", 60},
         {"seconds", 1}
     };
-    std::vector<std::string> timeUnits;
+    std::vector<std::string> time_units;
 
     // Divide number of seconds into days, hours, minutes, and seconds and create strings
     for (const auto& [UNIT_NAME, UNIT_SIZE] : INTERVALS) {
         // Only add as many time units as specified by granularity
-        if (timeUnits.size() >= granularity) {
+        if (time_units.size() >= granularity) {
             break;
         }
 
         // Get number of units and subtract from the seconds left
-        unsigned int unitAmount = seconds / UNIT_SIZE;
-        seconds -= unitAmount * UNIT_SIZE;
+        unsigned int unit_amount = seconds / UNIT_SIZE;
+        seconds -= unit_amount * UNIT_SIZE;
         // Don't include unit in time string if there are zero of them
-        if (unitAmount == 0) {
+        if (unit_amount == 0) {
             continue;
         }
 
         // Add unit string to list
-        timeUnits.push_back(std::to_string(unitAmount) + ' ' + UNIT_NAME);
+        time_units.push_back(std::to_string(unit_amount) + ' ' + UNIT_NAME);
         // Remove plural "s" if there is only one of this unit
-        if (unitAmount == 1) {
-            timeUnits.back().pop_back();
+        if (unit_amount == 1) {
+            time_units.back().pop_back();
         }
     }
 
-    switch (timeUnits.size()) {
+    switch (time_units.size()) {
         // If no units were added to the list, then there are zero seconds
         case 0:
             return "0 seconds";
         // If there is only one unit in the list, it's not a grammatical list
         case 1:
-            return timeUnits.front();
+            return time_units.front();
         // If there are two units in the list, separate them by "and" with no commas
         case 2:
-            return timeUnits.front() + " and " + timeUnits.back();
+            return time_units.front() + " and " + time_units.back();
         // If there are at least three units in the list, separate them by commas with a final "and"
         default:
             // Start with first value
-            std::string fancyTime = timeUnits.front();
+            std::string fancyTime = time_units.front();
             // Add middle values with commas
-            for (int i = 1; i < timeUnits.size() - 1; i++) {
-                fancyTime += ", " + timeUnits[i];
+            for (int i = 1; i < time_units.size() - 1; i++) {
+                fancyTime += ", " + time_units[i];
             }
             // Add final value with "and". Yes, we do Oxford Commas in this house!
-            fancyTime += ", and " + timeUnits.back();
+            fancyTime += ", and " + time_units.back();
 
             return fancyTime;
     }
 }
 
-std::string util::sql_escape_string(const std::string_view str, bool wrap_single_quotes) {
+std::string util::sql_escape_string(const std::string_view str, const bool wrap_single_quotes) {
     std::string escaped_str;
     if (wrap_single_quotes) {
         escaped_str += '\'';
@@ -95,7 +95,7 @@ std::string util::sql_escape_string(const std::string_view str, bool wrap_single
     return escaped_str;
 }
 
-bool util::valid_command_name(std::string_view command_name) {
+bool util::valid_command_name(const std::string_view command_name) {
     bool valid = true;
     for (char c : command_name) {
         bool is_lowercase = c >= 'a' && c <= 'z';

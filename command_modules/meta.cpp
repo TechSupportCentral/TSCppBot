@@ -22,10 +22,10 @@ void meta::ping(const dpp::slashcommand_t &event) {
 
 void meta::uptime(const dpp::slashcommand_t &event) {
     uint64_t uptime = event.owner->uptime().to_secs();
-    event.reply(std::string("Up for ") + util::secondsToFancyTime(uptime, 4));
+    event.reply(std::string("Up for ") + util::seconds_to_fancytime(uptime, 4));
 }
 
-void meta::getCommit(const dpp::slashcommand_t &event) {
+void meta::get_commit(const dpp::slashcommand_t &event) {
     event.thinking(true); // Show "thinking" status in case git takes more than 500ms to run
     std::string commit_hash;
     // Run git show in the current directory to get the current commit
@@ -41,4 +41,27 @@ void meta::getCommit(const dpp::slashcommand_t &event) {
     event.edit_original_response(dpp::message(std::string("I am currently running on commit [")
                                  + commit_hash + "](https://github.com/TechSupportCentral/TSCppBot/commit/"
                                  + commit_hash + ")."));
+}
+
+void meta::send_message(const dpp::slashcommand_t &event) {
+    event.reply(std::get<std::string>(event.get_parameter("message")));
+}
+
+void meta::announce(const dpp::slashcommand_t &event) {
+    dpp::embed embed = dpp::embed().set_color(0x00A0A0).
+    set_description(std::get<std::string>(event.get_parameter("message")));
+    try {
+        std::string title = std::get<std::string>(event.get_parameter("title"));
+        embed.set_title(title);
+    } catch (const std::bad_variant_access& e) {
+        embed.set_title("Announcement");
+    }
+    try {
+        dpp::snowflake ping_role_id = std::get<dpp::snowflake>(event.get_parameter("ping"));
+        dpp::message message = dpp::message(event.command.channel_id, embed);
+        message.set_content(std::string("<@&") + std::to_string(ping_role_id) + '>');
+        event.reply(message);
+    } catch (const std::bad_variant_access& e) {
+        event.reply(dpp::message(event.command.channel_id, embed));
+    }
 }

@@ -18,6 +18,46 @@
       "options": [],
       "global": true,
       "admin_only": true
+    },
+    {
+      "name": "sendmessage",
+      "description": "Send a message as the bot",
+      "options": [
+        {
+          "name": "message",
+          "description": "Message to send",
+          "type": 3,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    },
+    {
+      "name": "announce",
+      "description": "Send an announcement as the bot",
+      "options": [
+        {
+          "name": "message",
+          "description": "Message to send",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "title",
+          "description": "Title for the announcement embed. Defaults to \"Announcement\"",
+          "type": 3,
+          "required": false
+        },
+        {
+          "name": "ping",
+          "description": "Role to ping",
+          "type": 8,
+          "required": false
+        }
+      ],
+      "global": false,
+      "admin_only": true
     }
   ],
   "server_info": [
