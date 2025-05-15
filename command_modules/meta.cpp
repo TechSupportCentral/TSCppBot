@@ -26,12 +26,19 @@ void meta::uptime(const dpp::slashcommand_t &event) {
 }
 
 void meta::getCommit(const dpp::slashcommand_t &event) {
+    event.thinking(true); // Show "thinking" status in case git takes more than 500ms to run
+    std::string commit_hash;
     // Run git show in the current directory to get the current commit
     dpp::utility::exec("git", {"show", "-s", "--oneline"},
-        [&event](const std::string& output) {
+        [&commit_hash](const std::string& output) {
             // Get the first 7 characters (the commit hash) from the command output
-            std::string commitHash = output.substr(0, 7);
-            event.reply(std::string("I am currently running on commit [") + commitHash + "](https://github.com/TechSupportCentral/TSCppBot/commit/" + commitHash + ").");
+            commit_hash = output.substr(0, 7);
         }
     );
+    /* git is run on a separate thread that the event cannot be passed to.
+       Wait for the command to finish before replying to the event. */
+    while (commit_hash.empty()) {}
+    event.edit_original_response(dpp::message(std::string("I am currently running on commit [")
+                                 + commit_hash + "](https://github.com/TechSupportCentral/TSCppBot/commit/"
+                                 + commit_hash + ")."));
 }

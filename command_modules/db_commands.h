@@ -17,4 +17,25 @@
 #include <sqlite3.h>
 
 namespace db_commands {
+    struct text_command {
+        std::string description;
+        std::string value;
+        bool global;
+    };
+    struct embed_command {
+        std::string description;
+        dpp::embed embed;
+        bool global;
+    };
+    enum command_search_result {
+        COMMAND_FOUND,
+        COMMAND_NOT_FOUND,
+        WAITING,
+        ERROR
+    };
+
+    void add_text_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, sqlite3 *db);
+    void add_embed_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
+    void add_embed_command_field(const dpp::slashcommand_t &event, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
+    void get_commands(const dpp::slashcommand_t &event, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands);
 }

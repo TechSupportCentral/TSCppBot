@@ -17,4 +17,6 @@
 
 namespace util {
     std::string secondsToFancyTime(unsigned int seconds, unsigned short int granularity);
+    std::string sql_escape_string(std::string_view str, bool wrap_single_quotes = false);
+    bool valid_command_name(std::string_view command_name);
 }

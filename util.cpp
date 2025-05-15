@@ -71,3 +71,41 @@ std::string util::secondsToFancyTime(unsigned int seconds, unsigned short int gr
             return fancyTime;
     }
 }
+
+std::string util::sql_escape_string(const std::string_view str, bool wrap_single_quotes) {
+    std::string escaped_str;
+    if (wrap_single_quotes) {
+        escaped_str += '\'';
+    }
+    for (char c : str) {
+        if (c == '\'') {
+            escaped_str += "''";
+        } else if (c == '\\') {
+            escaped_str += "\\\\";
+        } else if (c == '%' || c == '_') {
+            escaped_str += "\\" + std::string(1, c);
+        } else {
+            escaped_str += c;
+        }
+    }
+    if (wrap_single_quotes) {
+        escaped_str += '\'';
+    }
+    return escaped_str;
+}
+
+bool util::valid_command_name(std::string_view command_name) {
+    bool valid = true;
+    for (char c : command_name) {
+        bool is_lowercase = c >= 'a' && c <= 'z';
+        bool is_num = c >= '0' && c <= '9';
+        bool is_allowed_special_char = c == '-' || c == '_';
+
+        if (!is_lowercase && !is_num && !is_allowed_special_char) {
+            valid = false;
+            break;
+        }
+    }
+    if (command_name.size() > 32) valid = false;
+    return valid;
+}

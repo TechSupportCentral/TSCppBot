@@ -16,7 +16,7 @@
       "name": "commit",
       "description": "See what git commit the bot is currently running on",
       "options": [],
-      "global": false,
+      "global": true,
       "admin_only": true
     }
   ],
@@ -57,9 +57,21 @@
           "required": true
         },
         {
+          "name": "description",
+          "description": "Description of the command to create",
+          "type": 3,
+          "required": true
+        },
+        {
           "name": "content",
           "description": "Text for bot to send when the command is run",
           "type": 3,
+          "required": true
+        },
+        {
+          "name": "is_global",
+          "description": "True if the command should be available to run outside the server",
+          "type": 5,
           "required": true
         }
       ],
@@ -71,9 +83,21 @@
       "description": "Add a custom embed-based database command",
       "options": [
         {
-          "name": "name",
+          "name": "command_name",
           "description": "Name of the command to create",
           "type": 3,
+          "required": true
+        },
+        {
+          "name": "command_description",
+          "description": "Description of the command to create",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "command_is_global",
+          "description": "True if the command should be available to run outside the server",
+          "type": 5,
           "required": true
         },
         {
@@ -96,7 +120,7 @@
         },
         {
           "name": "color",
-          "description": "Accent color for the embed, as a number converted from the RGB hex code",
+          "description": "Accent color for the embed as an RGB hex code (ex. 0x00FF00 for pure green)",
           "type": 4,
           "min_value": 0,
           "max_value": 16777215,
@@ -126,61 +150,33 @@
           "type": 4,
           "min_value": 0,
           "required": false
-        }
-      ],
-      "global": false,
-      "admin_only": true
-    },
-    {
-      "name": "add-embed-command-author",
-      "description": "Add author to a custom embed-based database command",
-      "options": [
-        {
-          "name": "command_name",
-          "description": "Name of the command to modify",
-          "type": 3,
-          "required": true
         },
         {
-          "name": "name",
+          "name": "author_name",
           "description": "Author name",
           "type": 3,
           "required": false
         },
         {
-          "name": "url",
+          "name": "author_url",
           "description": "URL associated with author name",
           "type": 3,
           "required": false
         },
         {
-          "name": "icon_url",
+          "name": "author_icon_url",
           "description": "URL to icon image to show to the left of the author name",
           "type": 3,
           "required": false
-        }
-      ],
-      "global": false,
-      "admin_only": true
-    },
-    {
-      "name": "add-embed-command-footer",
-      "description": "Add footer to a custom embed-based database command",
-      "options": [
-        {
-          "name": "command_name",
-          "description": "Name of the command to modify",
-          "type": 3,
-          "required": true
         },
         {
-          "name": "text",
+          "name": "footer_text",
           "description": "Text to put in the embed footer",
           "type": 3,
           "required": false
         },
         {
-          "name": "icon_url",
+          "name": "footer_icon_url",
           "description": "URL to icon image to show to the left of the footer text",
           "type": 3,
           "required": false
@@ -218,6 +214,13 @@
           "required": true
         }
       ],
+      "global": false,
+      "admin_only": true
+    },
+    {
+      "name": "db-command-list",
+      "description": "Get a list of commands in database",
+      "options": [],
       "global": false,
       "admin_only": true
     }
