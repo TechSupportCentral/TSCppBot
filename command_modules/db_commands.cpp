@@ -15,6 +15,10 @@
 #include "db_commands.h"
 #include "../util.h"
 
+// Internal functions
+void remove_text_command(const dpp::slashcommand_t &event, const nlohmann::json &config, const std::string &command_name, bool global, sqlite3 *db);
+void remove_embed_command(const dpp::slashcommand_t &event, const nlohmann::json &config, const std::string &command_name, bool global, sqlite3 *db);
+
 void db_commands::add_text_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, sqlite3 *db) {
     // Send "thinking" response to allow time for DB operation
     event.thinking();
@@ -25,44 +29,18 @@ void db_commands::add_text_command(const dpp::slashcommand_t &event, const nlohm
         return;
     }
     // Make sure command doesn't already exist
-    command_search_result status = WAITING;
-    event.owner->global_commands_get([&command_name, &status](const dpp::confirmation_callback_t& data) {
-        if (data.is_error()) {
-            status = ERROR;
-        } else {
-            for (const auto& command : std::get<dpp::slashcommand_map>(data.value)) {
-                if (command.second.name == command_name) {
-                    status = COMMAND_FOUND;
-                    break;
-                }
-            }
-            if (status == WAITING) status = COMMAND_NOT_FOUND;
+    auto search_results = util::find_command(event, config, command_name);
+    for (const auto &result : {std::get<0>(search_results), std::get<1>(search_results)}) {
+        switch (result) {
+            case util::COMMAND_FOUND:
+                event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` already exists."));
+                return;
+            case util::ERROR:
+                event.edit_original_response(dpp::message("Bot failed to get guild command list."));
+                return;
+            default:
+                continue;
         }
-    });
-    while (status == WAITING) {}
-    event.owner->guild_commands_get(config["guild_id"], [&command_name, &status](const dpp::confirmation_callback_t& data) {
-        if (data.is_error()) {
-            status = ERROR;
-        } else {
-            for (const auto& command : std::get<dpp::slashcommand_map>(data.value)) {
-                if (command.second.name == command_name) {
-                    status = COMMAND_FOUND;
-                    break;
-                }
-            }
-            if (status == WAITING) status = COMMAND_NOT_FOUND;
-        }
-    });
-    while (status == WAITING) {}
-    switch (status) {
-        case COMMAND_FOUND:
-            event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` already exists."));
-            return;
-        case ERROR:
-            event.edit_original_response(dpp::message("Bot failed to get guild command list."));
-            return;
-        default:
-            break;
     }
 
     // Build text_command based on passed parameters
@@ -120,44 +98,18 @@ void db_commands::add_embed_command(const dpp::slashcommand_t &event, const nloh
         return;
     }
     // Make sure command doesn't already exist
-    command_search_result status = WAITING;
-    event.owner->global_commands_get([&command_name, &status](const dpp::confirmation_callback_t& data) {
-        if (data.is_error()) {
-            status = ERROR;
-        } else {
-            for (const auto& command : std::get<dpp::slashcommand_map>(data.value)) {
-                if (command.second.name == command_name) {
-                    status = COMMAND_FOUND;
-                    break;
-                }
-            }
-            if (status == WAITING) status = COMMAND_NOT_FOUND;
+    auto search_results = util::find_command(event, config, command_name);
+    for (const auto &result : {std::get<0>(search_results), std::get<1>(search_results)}) {
+        switch (result) {
+            case util::COMMAND_FOUND:
+                event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` already exists."));
+                return;
+            case util::ERROR:
+                event.edit_original_response(dpp::message("Bot failed to get guild command list."));
+                return;
+            default:
+                continue;
         }
-    });
-    while (status == WAITING) {}
-    event.owner->guild_commands_get(config["guild_id"], [&command_name, &status](const dpp::confirmation_callback_t& data) {
-        if (data.is_error()) {
-            status = ERROR;
-        } else {
-            for (const auto& command : std::get<dpp::slashcommand_map>(data.value)) {
-                if (command.second.name == command_name) {
-                    status = COMMAND_FOUND;
-                    break;
-                }
-            }
-            if (status == WAITING) status = COMMAND_NOT_FOUND;
-        }
-    });
-    while (status == WAITING) {}
-    switch (status) {
-        case COMMAND_FOUND:
-            event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` already exists."));
-            return;
-        case ERROR:
-            event.edit_original_response(dpp::message("Bot failed to get guild command list."));
-            return;
-        default:
-            break;
     }
 
     // Build embed_command and SQL row based on passed parameters
@@ -282,7 +234,6 @@ void db_commands::add_embed_command(const dpp::slashcommand_t &event, const nloh
     + ", " + sql_row.color + ", " + sql_row.timestamp + ", " + sql_row.author_name + ", " + sql_row.author_url
     + ", " + sql_row.author_icon_url + ", " + sql_row.footer_text + ", " + sql_row.footer_icon_url + ", NULL);";
     char** error_message = {};
-    std::cout << sql_query;
     sqlite3_exec(db, sql_query.c_str(), nullptr, nullptr, error_message);
     if (error_message != nullptr) {
         std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << *error_message << std::endl;
@@ -350,7 +301,6 @@ void db_commands::add_embed_command_field(const dpp::slashcommand_t &event, std:
     std::string sql_command_name = util::sql_escape_string(command_name, true);
     std::string field_ids = "'";
     error_message = {};
-    std::cout << std::string("SELECT fields FROM embed_commands WHERE command_name=") + sql_command_name + ';' << std::endl;
     sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + sql_command_name + ';').c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
             auto output_string = static_cast<std::string*>(output);
@@ -372,7 +322,6 @@ void db_commands::add_embed_command_field(const dpp::slashcommand_t &event, std:
     }
     field_ids += std::to_string(field_id) + '\'';
     error_message = {};
-    std::cout << std::string("UPDATE embed_commands SET fields = ") + field_ids + " WHERE command_name=" + sql_command_name + ';' << std::endl;
     sqlite3_exec(db, (std::string("UPDATE embed_commands SET fields = ") + field_ids + "WHERE command_name=" + sql_command_name + ';').c_str(), nullptr, nullptr, error_message);
     if (error_message != nullptr) {
         std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << *error_message << std::endl;
@@ -384,6 +333,116 @@ void db_commands::add_embed_command_field(const dpp::slashcommand_t &event, std:
     // Add field to command in command list
     embed_commands.insert_or_assign(command_name, command);
     event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` edited successfully."));
+}
+
+void db_commands::remove_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
+    // Send "thinking" response to allow time for DB operation
+    event.thinking();
+    std::string command_name = std::get<std::string>(event.get_parameter("name"));
+
+    // Get existing command
+    auto text_command_it = text_commands.find(command_name);
+    if (text_command_it != text_commands.end()) {
+        remove_text_command(event, config, command_name, text_command_it->second.global, db);
+        text_commands.erase(text_command_it);
+        return;
+    }
+    auto embed_command_it = embed_commands.find(command_name);
+    if (embed_command_it != embed_commands.end()) {
+        remove_embed_command(event, config, command_name, embed_command_it->second.global, db);
+        embed_commands.erase(embed_command_it);
+        return;
+    }
+    // Let user know if command doesn't exist
+    event.edit_original_response(dpp::message(std::string("Database command `") + command_name + "` not found."));
+}
+
+void remove_text_command(const dpp::slashcommand_t &event, const nlohmann::json &config, const std::string &command_name, bool global, sqlite3 *db) {
+    // Remove command from database
+    char** error_message = {};
+    sqlite3_exec(db, (std::string("DELETE FROM text_commands WHERE name=") + util::sql_escape_string(command_name, true) + ';').c_str(), nullptr, nullptr, error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << *error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from database."));
+        return;
+    }
+
+    // Remove slash command
+    if (global) {
+        auto search_results = util::find_command(event, config, command_name);
+        if (std::get<0>(search_results) != util::COMMAND_FOUND) {
+            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
+            return;
+        }
+        event.owner->global_command_delete(std::get<2>(search_results));
+    } else {
+        auto search_results = util::find_command(event, config, command_name);
+        if (std::get<1>(search_results) != util::COMMAND_FOUND) {
+            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
+            return;
+        }
+        event.owner->guild_command_delete(std::get<2>(search_results), config["guild_id"]);
+    }
+
+    event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` removed successfully."));
+}
+
+void remove_embed_command(const dpp::slashcommand_t &event, const nlohmann::json &config, const std::string &command_name, bool global, sqlite3 *db) {
+    // Get fields that are part of this embed command
+    std::string fields;
+    char** error_message = {};
+    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto fields = static_cast<std::string*>(output);
+            fields->append(column_values[0]);
+            return 0;
+        },
+    &fields, error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << *error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from database."));
+        return;
+    }
+    // Remove fields from database
+    error_message = {};
+    sqlite3_exec(db, (std::string("DELETE FROM embed_command_fields WHERE id IN (") + fields + ");").c_str(), nullptr, nullptr, error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << *error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from database."));
+        return;
+    }
+
+    // Remove command from database
+    error_message = {};
+    sqlite3_exec(db, (std::string("DELETE FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(), nullptr, nullptr, error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << *error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from database."));
+        return;
+    }
+
+    // Remove slash command
+    if (global) {
+        auto search_results = util::find_command(event, config, command_name);
+        if (std::get<0>(search_results) != util::COMMAND_FOUND) {
+            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
+            return;
+        }
+        event.owner->global_command_delete(std::get<2>(search_results));
+    } else {
+        auto search_results = util::find_command(event, config, command_name);
+        if (std::get<1>(search_results) != util::COMMAND_FOUND) {
+            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
+            return;
+        }
+        event.owner->guild_command_delete(std::get<2>(search_results), config["guild_id"]);
+    }
+
+    event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` removed successfully."));
 }
 
 void db_commands::get_commands(const dpp::slashcommand_t &event, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands) {

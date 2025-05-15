@@ -18,7 +18,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 
-#define DATA_PATH "/path/to/TSCppBot"
+#define DATA_PATH "/home/ben/CLionProjects/TSCppBot"
 constexpr const char* DB_FILE = DATA_PATH "/TSCppBot.db";
 
 int main() {
@@ -133,6 +133,7 @@ int main() {
         if (command_name == "add-text-command") db_commands::add_text_command(event, config, db_text_commands, db);
         else if (command_name == "add-embed-command") db_commands::add_embed_command(event, config, db_embed_commands, db);
         else if (command_name == "add-embed-command-field") db_commands::add_embed_command_field(event, db_embed_commands, db);
+        else if (command_name == "remove-db-command") db_commands::remove_command(event, config, db_text_commands, db_embed_commands, db);
         else if (command_name == "db-command-list") db_commands::get_commands(event, db_text_commands, db_embed_commands);
         else if (command_name == "ping") meta::ping(event);
         else if (command_name == "uptime") meta::uptime(event);

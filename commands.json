@@ -218,6 +218,20 @@
       "admin_only": true
     },
     {
+      "name": "remove-db-command",
+      "description": "Remove a database command",
+      "options": [
+        {
+          "name": "name",
+          "description": "Name of the command to modify",
+          "type": 3,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    },
+    {
       "name": "db-command-list",
       "description": "Get a list of commands in database",
       "options": [],
