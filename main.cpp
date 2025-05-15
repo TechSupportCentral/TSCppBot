@@ -15,7 +15,6 @@
 #include "command_modules/meta.h"
 #include "command_modules/server_info.h"
 #include "command_modules/db_commands.h"
-#include <nlohmann/json.hpp>
 #include <fstream>
 
 #define DATA_PATH "/home/ben/CLionProjects/TSCppBot"
@@ -36,7 +35,7 @@ int main() {
     std::unordered_map<std::string, db_commands::text_command> db_text_commands;
     std::unordered_map<std::string, db_commands::embed_command> db_embed_commands;
     // Get DB text command list
-    char** error_message = {};
+    char* error_message;
     sqlite3_exec(db, "SELECT * FROM text_commands;",
         [](void* command_list, int column_count, char** column_values, char** column_names) -> int {
             auto db_text_commands = static_cast<std::unordered_map<std::string, db_commands::text_command>*>(command_list);
@@ -48,19 +47,15 @@ int main() {
 
             db_text_commands->emplace(column_values[0], text_command);
             return 0;
-        }, &db_text_commands, error_message);
+        }, &db_text_commands, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << *error_message << std::endl;
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
         sqlite3_free(error_message);
     }
     // Get DB embed command list
-    std::pair callback_data = {db, &db_embed_commands};
-    error_message = {};
     sqlite3_exec(db, "SELECT * FROM embed_commands;",
-        [](void* cb_data, int column_count, char** column_values, char** column_names) -> int {
-            auto data = static_cast<std::pair<sqlite3*, std::unordered_map<std::string, db_commands::embed_command>*>*>(cb_data);
-            auto db = data->first;
-            auto db_embed_commands = data->second;
+        [](void* command_list, int column_count, char** column_values, char** column_names) -> int {
+            auto db_embed_commands = static_cast<std::unordered_map<std::string, db_commands::embed_command>*>(command_list);
 
             db_commands::embed_command embed_command;
             embed_command.description = std::string(column_values[1]);
@@ -93,7 +88,8 @@ int main() {
                     if (status != 0) {
                         return;
                     }
-                    // Execute actual query
+                    // Execute query
+                    char* error_message;
                     sqlite3_exec(db, (std::string("SELECT * FROM embed_command_fields WHERE id IN (") + fields + ") ORDER BY id ASC;").c_str(),
                         [](void* command, int column_count, char** column_values, char** column_names) -> int {
                             auto embed_command = static_cast<db_commands::embed_command*>(command);
@@ -103,7 +99,11 @@ int main() {
                                 strcmp(column_values[3], "false")); // if field is inline or not
                             return 0;
                         },
-                    &embed_command, nullptr);
+                    &embed_command, &error_message);
+                    if (error_message != nullptr) {
+                        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+                        sqlite3_free(error_message);
+                    }
                     // Close new DB connection
                     sqlite3_close(db);
                 };
@@ -113,9 +113,9 @@ int main() {
             db_embed_commands->emplace(column_values[0], embed_command);
             return 0;
         },
-    &callback_data, error_message);
+    &db_embed_commands, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << *error_message << std::endl;
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
         sqlite3_free(error_message);
     }
 
