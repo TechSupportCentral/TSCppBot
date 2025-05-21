@@ -14,29 +14,75 @@
  */
 #include "db_commands.h"
 #include "../util.h"
+#include <sstream>
 
 // Internal functions
 void remove_text_command(const dpp::slashcommand_t &event, const nlohmann::json &config, const std::string &command_name, bool global, sqlite3 *db);
 void remove_embed_command(const dpp::slashcommand_t &event, const nlohmann::json &config, const std::string &command_name, bool global, sqlite3 *db);
 
-void db_commands::add_text_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, sqlite3 *db) {
+void db_commands::add_text_command_modal(const dpp::slashcommand_t &event) {
+    event.dialog(dpp::interaction_modal_response("add_text_command_form", "Add a text-based DB command")
+        .add_component(dpp::component()
+            .set_label("Command Name")
+            .set_id("add_text_command_name")
+            .set_type(dpp::cot_text)
+            .set_min_length(1)
+            .set_max_length(32)
+            .set_placeholder("Type command name here")
+            .set_default_value("")
+            .set_text_style(dpp::text_short)
+        ).add_row()
+        .add_component(dpp::component()
+            .set_label("Command Description")
+            .set_id("add_text_command_description")
+            .set_type(dpp::cot_text)
+            .set_min_length(1)
+            .set_max_length(100)
+            .set_placeholder("Type command description here")
+            .set_default_value("")
+            .set_text_style(dpp::text_short)
+        ).add_row()
+        .add_component(dpp::component()
+            .set_label("Command Content")
+            .set_id("add_text_command_content")
+            .set_type(dpp::cot_text)
+            .set_min_length(1)
+            .set_max_length(4000)
+            .set_placeholder("What does the bot say?")
+            .set_default_value("")
+            .set_text_style(dpp::text_paragraph)
+        ).add_row()
+        .add_component(dpp::component()
+            .set_label("Make command global?")
+            .set_id("add_text_command_global")
+            .set_type(dpp::cot_text)
+            .set_min_length(4)
+            .set_max_length(5)
+            .set_placeholder("Enter 'true' to make command accessible outside server, 'false' otherwise")
+            .set_default_value("")
+            .set_text_style(dpp::text_short)
+        )
+    );
+}
+
+void db_commands::add_text_command(const dpp::form_submit_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, sqlite3 *db) {
     // Send "thinking" response to allow time for DB operation
-    event.thinking();
+    event.reply(dpp::ir_deferred_channel_message_with_source, "");
     // Make sure command name is valid
-    std::string command_name = std::get<std::string>(event.get_parameter("name"));
+    std::string command_name = std::get<std::string>(event.components[0].components[0].value);
     if (!util::valid_command_name(command_name)) {
-        event.edit_original_response(dpp::message("Command name can only include lowercase letters, numbers, dash, or underscore, and must be 32 characters or less."));
+        event.edit_response("Command name can only include lowercase letters, numbers, dash, or underscore, and must be 32 characters or less.");
         return;
     }
     // Make sure command doesn't already exist
-    auto search_results = util::find_command(event, config, command_name);
+    auto search_results = util::find_command(event.owner, config, command_name);
     for (const auto &result : {std::get<0>(search_results), std::get<1>(search_results)}) {
         switch (result) {
             case util::COMMAND_FOUND:
-                event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` already exists."));
+                event.edit_response(std::string("Command `") + command_name + "` already exists.");
                 return;
             case util::ERROR:
-                event.edit_original_response(dpp::message("Bot failed to get guild command list."));
+                event.edit_response("Bot failed to get guild command list.");
                 return;
             default:
                 continue;
@@ -45,9 +91,9 @@ void db_commands::add_text_command(const dpp::slashcommand_t &event, const nlohm
 
     // Build text_command based on passed parameters
     text_command command;
-    command.description = std::get<std::string>(event.get_parameter("description"));
-    command.value = std::get<std::string>(event.get_parameter("content"));
-    command.global = std::get<bool>(event.get_parameter("is_global"));
+    command.description = std::get<std::string>(event.components[1].components[0].value);
+    command.value = std::get<std::string>(event.components[2].components[0].value);
+    command.global = (std::get<std::string>(event.components[3].components[0].value) == "true");
 
     // Build command SQL row
     std::string name = util::sql_escape_string(command_name);
@@ -67,7 +113,7 @@ void db_commands::add_text_command(const dpp::slashcommand_t &event, const nlohm
     if (error_message != nullptr) {
         std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
         sqlite3_free(error_message);
-        event.edit_original_response(dpp::message(std::string("Failed to add command `") + command_name + "` to database."));
+        event.edit_response(std::string("Failed to add command `") + command_name + "` to database.");
         return;
     }
 
@@ -85,7 +131,7 @@ void db_commands::add_text_command(const dpp::slashcommand_t &event, const nlohm
     } else {
         event.owner->guild_command_create(slash_command, config["guild_id"]);
     }
-    event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` added successfully."));
+    event.edit_response(std::string("Command `") + command_name + "` added successfully.");
 }
 
 void db_commands::add_embed_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
@@ -98,7 +144,7 @@ void db_commands::add_embed_command(const dpp::slashcommand_t &event, const nloh
         return;
     }
     // Make sure command doesn't already exist
-    auto search_results = util::find_command(event, config, command_name);
+    auto search_results = util::find_command(event.owner, config, command_name);
     for (const auto &result : {std::get<0>(search_results), std::get<1>(search_results)}) {
         switch (result) {
             case util::COMMAND_FOUND:
@@ -259,23 +305,65 @@ void db_commands::add_embed_command(const dpp::slashcommand_t &event, const nloh
     event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` added successfully."));
 }
 
-void db_commands::add_embed_command_field(const dpp::slashcommand_t &event, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
+void db_commands::add_embed_command_field_modal(const dpp::slashcommand_t &event, const std::unordered_map<std::string, embed_command> &embed_commands) {
+    // Make sure command exists
+    std::string command_name = std::get<std::string>(event.get_parameter("name"));
+    if (!embed_commands.contains(command_name)) {
+        event.reply(std::string("Embed-based DB command `") + command_name + "` not found.");
+        return;
+    }
+
+    event.dialog(dpp::interaction_modal_response(std::string("add_field_form") + ',' + command_name, std::string("Add a field in ") + command_name)
+        .add_component(dpp::component()
+            .set_label("Field Title")
+            .set_id("add_field_title")
+            .set_type(dpp::cot_text)
+            .set_min_length(1)
+            .set_max_length(256)
+            .set_placeholder("Type name of field here")
+            .set_default_value("")
+            .set_text_style(dpp::text_short)
+        ).add_row()
+        .add_component(dpp::component()
+            .set_label("Field Value")
+            .set_id("add_field_value")
+            .set_type(dpp::cot_text)
+            .set_min_length(1)
+            .set_max_length(1024)
+            .set_placeholder("Type text of field here")
+            .set_default_value("")
+            .set_text_style(dpp::text_paragraph)
+        ).add_row()
+        .add_component(dpp::component()
+            .set_label("Make field inline?")
+            .set_id("add_field_inline")
+            .set_type(dpp::cot_text)
+            .set_min_length(4)
+            .set_max_length(5)
+            .set_placeholder("Enter 'true' to place field in line with previous field, 'false' otherwise")
+            .set_default_value("")
+            .set_text_style(dpp::text_short)
+        )
+    );
+}
+
+void db_commands::add_embed_command_field(const dpp::form_submit_t &event, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
     // Send "thinking" response to allow time for DB operation
-    event.thinking();
+    event.reply(dpp::ir_deferred_channel_message_with_source, "");
     // Get existing command
-    std::string command_name = std::get<std::string>(event.get_parameter("command_name"));
+    std::string command_name = event.custom_id.substr(15);
     embed_command command;
     if (auto command_iterator = embed_commands.find(command_name); command_iterator != embed_commands.end()) {
         command = command_iterator->second;
     } else {
-        event.edit_original_response(dpp::message(std::string("Embed-based DB command `") + command_name + "` not found."));
+        event.edit_response(std::string("Embed-based DB command `") + command_name + "` not found.");
         return;
     }
 
     // Add field to embed and build SQL row based on passed parameters
-    std::string field_title = std::get<std::string>(event.get_parameter("title"));
-    std::string field_value = std::get<std::string>(event.get_parameter("value"));
-    bool field_inline = std::get<bool>(event.get_parameter("inline"));
+    std::string field_title = std::get<std::string>(event.components[0].components[0].value);
+    std::string field_value = std::get<std::string>(event.components[1].components[0].value);
+    bool field_inline = (std::get<std::string>(event.components[1].components[0].value) == "true");
     command.embed.add_field(field_title, field_value, field_inline);
     std::string title = util::sql_escape_string(field_title, true);
     std::string value = util::sql_escape_string(field_value, true);
@@ -292,7 +380,7 @@ void db_commands::add_embed_command_field(const dpp::slashcommand_t &event, std:
     if (error_message != nullptr) {
         std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
         sqlite3_free(error_message);
-        event.edit_original_response(dpp::message(std::string("Failed to edit command `") + command_name + "` in database."));
+        event.edit_response(std::string("Failed to edit command `") + command_name + "` in database.");
         return;
     }
     int64_t field_id = sqlite3_last_insert_rowid(db);
@@ -312,7 +400,7 @@ void db_commands::add_embed_command_field(const dpp::slashcommand_t &event, std:
     if (error_message != nullptr) {
         std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
         sqlite3_free(error_message);
-        event.edit_original_response(dpp::message(std::string("Failed to edit command `") + command_name + "` in database."));
+        event.edit_response(std::string("Failed to edit command `") + command_name + "` in database.");
         return;
     }
     // Add field ID to command in DB
@@ -324,13 +412,342 @@ void db_commands::add_embed_command_field(const dpp::slashcommand_t &event, std:
     if (error_message != nullptr) {
         std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
         sqlite3_free(error_message);
-        event.edit_original_response(dpp::message(std::string("Failed to edit command `") + command_name + "` in database."));
+        event.edit_response(std::string("Failed to edit command `") + command_name + "` in database.");
         return;
     }
 
     // Add field to command in command list
     embed_commands.insert_or_assign(command_name, command);
-    event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` edited successfully."));
+    event.edit_response(std::string("Command `") + command_name + "` edited successfully.");
+}
+
+void db_commands::remove_embed_command_field_menu(const dpp::slashcommand_t &event, std::unordered_map<std::string, embed_command> const &embed_commands, sqlite3 *db) {
+    // Send "thinking" response to allow time for DB operation
+    event.thinking();
+    // Make sure command exists
+    std::string command_name = std::get<std::string>(event.get_parameter("name"));
+    if (!embed_commands.contains(command_name)) {
+        event.edit_original_response(dpp::message(std::string("Embed-based DB command `") + command_name + "` not found."));
+        return;
+    }
+
+    // Get current field IDs from command in DB
+    std::string field_ids;
+    char* error_message;
+    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto field_ids = static_cast<std::string*>(output);
+            if (column_values[0] != nullptr) {
+                field_ids->append(column_values[0]);
+            }
+            return 0;
+        },
+    &field_ids, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message("Failed to get field from database."));
+        return;
+    }
+
+    // Construct Discord select menu component with field titles
+    std::map<std::string, std::string> fields;
+    sqlite3_exec(db, (std::string("SELECT id, title FROM embed_command_fields WHERE id IN (") + field_ids + ");").c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto output_map = static_cast<std::map<std::string, std::string>*>(output);
+            output_map->emplace(column_values[0], column_values[1]);
+            return 0;
+        },
+    &fields, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message("Failed to get field from database."));
+        return;
+    }
+    if (fields.empty()) {
+        event.edit_original_response(dpp::message(std::string("Embed for command `") + command_name + "` has no embeds."));
+        return;
+    }
+    dpp::component select_menu = dpp::component().set_type(dpp::cot_selectmenu)
+    .set_placeholder("Select a field to remove").set_id("remove_field_select");
+    for (const auto& [id, title] : fields) {
+        select_menu.add_select_option(dpp::select_option(title, id + '\n' + command_name));
+    }
+    event.edit_original_response(dpp::message().add_component(dpp::component().add_component(select_menu)));
+}
+
+void db_commands::remove_embed_command_field(const dpp::select_click_t &event, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
+    // Send "thinking" response to allow time for DB operation
+    event.reply(dpp::ir_deferred_channel_message_with_source, "");
+    // Get context info from selection value
+    std::string id, command_name;
+    std::istringstream context(event.values[0]);
+    std::getline(context, id);
+    int field_id = std::stoi(id);
+    std::getline(context, command_name);
+    embed_command command = embed_commands.find(command_name)->second;
+    std::vector<int> field_ids;
+    // Get field IDs
+    char* error_message;
+    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto output_vec = static_cast<std::vector<int>*>(output);
+            if (column_values[0] != nullptr) {
+                std::istringstream field_ids(column_values[0]);
+                std::string id;
+                while (std::getline(field_ids, id, ',')) {
+                    output_vec->push_back(std::stoi(id));
+                }
+            }
+            return 0;
+        },
+    &field_ids, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_response("Failed to get field from database.");
+        return;
+    }
+
+    // Make sure there are still fields left
+    if (field_ids.empty()) {
+        event.edit_response(std::string("Embed for command `") + command_name + "` has no fields.");
+        return;
+    }
+    // Make sure this field hasn't already been removed
+    int field_index = -1;
+    for (int i = 0; i < field_ids.size(); i++) {
+        if (field_ids[i] == field_id) {
+            field_index = i;
+        }
+    }
+    if (field_index == -1) {
+        event.edit_response("This field was already removed.");
+        return;
+    }
+    // Remove this field from the list
+    field_ids.erase(field_ids.begin() + field_index);
+
+    // Remove field from database
+    sqlite3_exec(db, (std::string("DELETE FROM embed_command_fields WHERE id=") + id + ';').c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_response("Failed to remove field from database.");
+        return;
+    }
+
+    // Update fields list for command in DB
+    std::string new_field_ids;
+    if (field_ids.empty()) {
+        new_field_ids = "NULL";
+    } else {
+        new_field_ids += '\'';
+        for (int i = 0; i < field_ids.size() - 1; i++) {
+            new_field_ids += std::to_string(field_ids[i]) + ',';
+        }
+        new_field_ids += std::to_string(field_ids.back()) + '\'';
+    }
+    sqlite3_exec(db, (std::string("UPDATE embed_commands SET fields = ") + new_field_ids + " WHERE command_name=" + util::sql_escape_string(command_name, true) + ';').c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_response(std::string("Failed to edit command `") + command_name + "` in database.");
+        return;
+    }
+
+    // Remove field from command in command list
+    command.embed.fields.erase(command.embed.fields.begin() + field_index);
+    embed_commands.insert_or_assign(command_name, command);
+    event.edit_response(std::string("Command `") + command_name + "` edited successfully.");
+}
+
+void db_commands::edit_embed_command_field_menu(const dpp::slashcommand_t &event, const std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
+    // Send "thinking" response to allow time for DB operation
+    event.thinking();
+    // Make sure command exists
+    std::string command_name = std::get<std::string>(event.get_parameter("name"));
+    if (!embed_commands.contains(command_name)) {
+        event.edit_original_response(dpp::message(std::string("Embed-based DB command `") + command_name + "` not found."));
+        return;
+    }
+
+    // Get current field IDs from command in DB
+    std::string field_ids;
+    char* error_message;
+    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto field_ids = static_cast<std::string*>(output);
+            if (column_values[0] != nullptr) {
+                field_ids->append(column_values[0]);
+            }
+            return 0;
+        },
+    &field_ids, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message("Failed to get field from database."));
+        return;
+    }
+
+    // Construct Discord select menu component with field titles
+    std::map<std::string, std::string> fields;
+    sqlite3_exec(db, (std::string("SELECT id, title FROM embed_command_fields WHERE id IN (") + field_ids + ");").c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto output_map = static_cast<std::map<std::string, std::string>*>(output);
+            output_map->emplace(column_values[0], column_values[1]);
+            return 0;
+        },
+    &fields, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message("Failed to get field from database."));
+        return;
+    }
+    if (fields.empty()) {
+        event.edit_original_response(dpp::message(std::string("Embed for command `") + command_name + "` has no fields."));
+        return;
+    }
+    dpp::component select_menu = dpp::component().set_type(dpp::cot_selectmenu)
+    .set_placeholder("Select field to edit").set_id("edit_field_select");
+    for (const auto& [id, title] : fields) {
+        select_menu.add_select_option(dpp::select_option(title, id + '\n' + command_name));
+    }
+    event.edit_original_response(dpp::message().add_component(dpp::component().add_component(select_menu)));
+}
+
+void db_commands::edit_embed_command_field_modal(const dpp::select_click_t &event, sqlite3 *db) {
+    // Get context vars
+    std::string id, command_name;
+    std::istringstream context(event.values[0]);
+    std::getline(context, id);
+    std::getline(context, command_name);
+
+    // Get selected field info
+    char* error_message;
+    std::array<std::string, 3> field;
+    sqlite3_exec(db, (std::string("SELECT title, value, is_inline FROM embed_command_fields WHERE id = ") + id + ';').c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto field = static_cast<std::array<std::string, 3>*>(output);
+            field->at(0) = column_values[0];
+            field->at(1) = column_values[1];
+            field->at(2) = column_values[2];
+            return 0;
+        },
+    &field, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_response("Failed to get field from database.");
+        return;
+    }
+
+    event.dialog(dpp::interaction_modal_response(std::string("edit_field_form") + ',' + id + ',' + command_name, std::string("Edit a field in ") + command_name)
+        .add_component(dpp::component()
+            .set_label("New Field Title")
+            .set_id("edit_field_title")
+            .set_type(dpp::cot_text)
+            .set_min_length(1)
+            .set_max_length(256)
+            .set_default_value(field[0])
+            .set_text_style(dpp::text_short)
+        ).add_row()
+        .add_component(dpp::component()
+            .set_label("New Field Value")
+            .set_id("edit_field_value")
+            .set_type(dpp::cot_text)
+            .set_min_length(1)
+            .set_max_length(1024)
+            .set_default_value(field[1])
+            .set_text_style(dpp::text_paragraph)
+        ).add_row()
+        .add_component(dpp::component()
+            .set_label("Make field inline?")
+            .set_id("edit_field_inline")
+            .set_type(dpp::cot_text)
+            .set_min_length(4)
+            .set_max_length(5)
+            .set_placeholder(std::string("Enter 'true' or 'false' (field is currently ") + field[2] + ')')
+            .set_default_value("")
+            .set_text_style(dpp::text_short)
+        )
+    );
+}
+
+void db_commands::edit_embed_command_field(const dpp::form_submit_t &event, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
+    // Send "thinking" response to allow time for DB operation
+    event.reply(dpp::ir_deferred_channel_message_with_source, "");
+    // Get context info
+    std::istringstream context(event.custom_id.substr(16));
+    std::string id, command_name;
+    std::getline(context, id, ',');
+    int field_id = std::stoi(id);
+    std::getline(context, command_name, ',');
+    embed_command command = embed_commands.find(command_name)->second;
+    // Get values from modal
+    std::string title = std::get<std::string>(event.components[0].components[0].value);
+    std::string value = std::get<std::string>(event.components[1].components[0].value);
+    std::string is_inline;
+    if (std::get<std::string>(event.components[2].components[0].value) == "true") {
+        is_inline = "'true'";
+    } else {
+        is_inline = "'false'";
+    }
+
+    // Edit field info in DB
+    char* error_message;
+    sqlite3_exec(db, (std::string("UPDATE embed_command_fields SET title = ") + util::sql_escape_string(title, true)
+                          + ", value = " + util::sql_escape_string(value, true) + ", is_inline = " + is_inline
+                          + " WHERE id=" + id + ';').c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_response(std::string("Failed to edit command `") + command_name + "` in database.");
+        return;
+    }
+
+    std::vector<int> field_ids;
+    // Get field IDs for command
+    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto output_vec = static_cast<std::vector<int>*>(output);
+            if (column_values[0] != nullptr) {
+                std::istringstream field_ids(column_values[0]);
+                std::string id;
+                while (std::getline(field_ids, id, ',')) {
+                    output_vec->push_back(std::stoi(id));
+                }
+            }
+            return 0;
+        },
+    &field_ids, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_response("Failed to get field from database.");
+        return;
+    }
+    // Get index of field to update existing command
+    int field_index = -1;
+    for (int i = 0; i < field_ids.size(); i++) {
+        if (field_ids[i] == field_id) {
+            field_index = i;
+        }
+    }
+    if (field_index == -1) {
+        event.edit_response(std::string("Could not find field in command `") + command_name + "`.");
+        return;
+    }
+
+    // Update field inside command in command list
+    command.embed.fields[field_index].name = title;
+    command.embed.fields[field_index].value = value;
+    command.embed.fields[field_index].is_inline = (is_inline == "'true'");
+    embed_commands.insert_or_assign(command_name, command);
+    event.edit_response(std::string("Command `") + command_name + "` edited successfully.");
 }
 
 void db_commands::remove_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
@@ -368,14 +785,14 @@ void remove_text_command(const dpp::slashcommand_t &event, const nlohmann::json 
 
     // Remove slash command
     if (global) {
-        auto search_results = util::find_command(event, config, command_name);
+        auto search_results = util::find_command(event.owner, config, command_name);
         if (std::get<0>(search_results) != util::COMMAND_FOUND) {
             event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
             return;
         }
         event.owner->global_command_delete(std::get<2>(search_results));
     } else {
-        auto search_results = util::find_command(event, config, command_name);
+        auto search_results = util::find_command(event.owner, config, command_name);
         if (std::get<1>(search_results) != util::COMMAND_FOUND) {
             event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
             return;
@@ -423,14 +840,14 @@ void remove_embed_command(const dpp::slashcommand_t &event, const nlohmann::json
 
     // Remove slash command
     if (global) {
-        auto search_results = util::find_command(event, config, command_name);
+        auto search_results = util::find_command(event.owner, config, command_name);
         if (std::get<0>(search_results) != util::COMMAND_FOUND) {
             event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
             return;
         }
         event.owner->global_command_delete(std::get<2>(search_results));
     } else {
-        auto search_results = util::find_command(event, config, command_name);
+        auto search_results = util::find_command(event.owner, config, command_name);
         if (std::get<1>(search_results) != util::COMMAND_FOUND) {
             event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
             return;

@@ -111,11 +111,11 @@ bool util::valid_command_name(const std::string_view command_name) {
     return valid;
 }
 
-std::tuple<util::command_search_result, util::command_search_result, dpp::snowflake> util::find_command(const dpp::slashcommand_t &event, const nlohmann::json &config, const std::string &command_name) {
+std::tuple<util::command_search_result, util::command_search_result, dpp::snowflake> util::find_command(dpp::cluster* bot, const nlohmann::json &config, const std::string &command_name) {
     dpp::snowflake command_id(0);
 
     command_search_result global_status = WAITING;
-    event.owner->global_commands_get([&command_name, &command_id, &global_status](const dpp::confirmation_callback_t& data) {
+    bot->global_commands_get([&command_name, &command_id, &global_status](const dpp::confirmation_callback_t& data) {
         if (data.is_error()) {
             global_status = ERROR;
         } else {
@@ -136,7 +136,7 @@ std::tuple<util::command_search_result, util::command_search_result, dpp::snowfl
     }
 
     command_search_result guild_status = WAITING;
-    event.owner->guild_commands_get(config["guild_id"], [&command_name, &command_id, &guild_status](const dpp::confirmation_callback_t& data) {
+    bot->guild_commands_get(config["guild_id"], [&command_name, &command_id, &guild_status](const dpp::confirmation_callback_t& data) {
         if (data.is_error()) {
             guild_status = ERROR;
         } else {

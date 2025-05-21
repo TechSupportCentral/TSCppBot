@@ -27,5 +27,5 @@ namespace util {
     std::string seconds_to_fancytime(unsigned int seconds, unsigned short int granularity);
     std::string sql_escape_string(std::string_view str, bool wrap_single_quotes = false);
     bool valid_command_name(std::string_view command_name);
-    std::tuple<command_search_result, command_search_result, dpp::snowflake> find_command(const dpp::slashcommand_t &event, const nlohmann::json &config, const std::string &command_name);
+    std::tuple<command_search_result, command_search_result, dpp::snowflake> find_command(dpp::cluster* bot, const nlohmann::json &config, const std::string &command_name);
 }

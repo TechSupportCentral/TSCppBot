@@ -91,7 +91,7 @@ int main() {
                     }
                     // Execute query
                     char* error_message;
-                    sqlite3_exec(db, (std::string("SELECT * FROM embed_command_fields WHERE id IN (") + fields + ") ORDER BY id ASC;").c_str(),
+                    sqlite3_exec(db, (std::string("SELECT * FROM embed_command_fields WHERE id IN (") + fields + ");").c_str(),
                         [](void* command, int column_count, char** column_values, char** column_names) -> int {
                             auto embed_command = static_cast<db_commands::embed_command*>(command);
                             embed_command->embed.add_field(
@@ -131,9 +131,11 @@ int main() {
 
     bot.on_slashcommand([&config, &db_text_commands, &db_embed_commands, &db](const dpp::slashcommand_t &event) {
         std::string command_name = event.command.get_command_name();
-        if (command_name == "add-text-command") db_commands::add_text_command(event, config, db_text_commands, db);
+        if (command_name == "add-text-command") db_commands::add_text_command_modal(event);
         else if (command_name == "add-embed-command") db_commands::add_embed_command(event, config, db_embed_commands, db);
-        else if (command_name == "add-embed-command-field") db_commands::add_embed_command_field(event, db_embed_commands, db);
+        else if (command_name == "add-embed-command-field") db_commands::add_embed_command_field_modal(event, db_embed_commands);
+        else if (command_name == "remove-embed-command-field") db_commands::remove_embed_command_field_menu(event, db_embed_commands, db);
+        else if (command_name == "edit-embed-command-field") db_commands::edit_embed_command_field_menu(event, db_embed_commands, db);
         else if (command_name == "remove-db-command") db_commands::remove_command(event, config, db_text_commands, db_embed_commands, db);
         else if (command_name == "db-command-list") db_commands::get_commands(event, db_text_commands, db_embed_commands);
         else if (command_name == "ping") meta::ping(event);
@@ -156,6 +158,15 @@ int main() {
                 }
             }
         }
+    });
+    bot.on_select_click([&db_embed_commands, &db](const dpp::select_click_t &event) {
+        if (event.custom_id == "remove_field_select") db_commands::remove_embed_command_field(event, db_embed_commands, db);
+        else if (event.custom_id == "edit_field_select") db_commands::edit_embed_command_field_modal(event, db);
+    });
+    bot.on_form_submit([&config, &db_text_commands, &db_embed_commands, &db](const dpp::form_submit_t &event) {
+        if (event.custom_id == "add_text_command_form") db_commands::add_text_command(event, config, db_text_commands, db);
+        else if (event.custom_id.substr(0, 14) == "add_field_form") db_commands::add_embed_command_field(event, db_embed_commands, db);
+        else if (event.custom_id.substr(0, 15) == "edit_field_form") db_commands::edit_embed_command_field(event, db_embed_commands, db);
     });
 
     bot.on_ready([&bot, &commands, &config, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {

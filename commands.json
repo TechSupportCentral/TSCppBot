@@ -89,32 +89,7 @@
     {
       "name": "add-text-command",
       "description": "Add a custom text-based database command",
-      "options": [
-        {
-          "name": "name",
-          "description": "Name of the command to create",
-          "type": 3,
-          "required": true
-        },
-        {
-          "name": "description",
-          "description": "Description of the command to create",
-          "type": 3,
-          "required": true
-        },
-        {
-          "name": "content",
-          "description": "Text for bot to send when the command is run",
-          "type": 3,
-          "required": true
-        },
-        {
-          "name": "is_global",
-          "description": "True if the command should be available to run outside the server",
-          "type": 5,
-          "required": true
-        }
-      ],
+      "options": [],
       "global": false,
       "admin_only": true
     },
@@ -230,27 +205,37 @@
       "description": "Add a field to a custom embed-based database command",
       "options": [
         {
-          "name": "command_name",
+          "name": "name",
           "description": "Name of the command to modify",
           "type": 3,
           "required": true
-        },
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    },
+    {
+      "name": "remove-embed-command-field",
+      "description": "Remove an embed field in a custom database command",
+      "options": [
         {
-          "name": "title",
-          "description": "Title of the field",
+          "name": "name",
+          "description": "Name of the command to modify",
           "type": 3,
           "required": true
-        },
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    },
+    {
+      "name": "edit-embed-command-field",
+      "description": "Edit an embed field in a custom database command",
+      "options": [
         {
-          "name": "value",
-          "description": "Text in the field",
+          "name": "name",
+          "description": "Name of the command to modify",
           "type": 3,
-          "required": true
-        },
-        {
-          "name": "inline",
-          "description": "Whether or not to line up the field with the previous field",
-          "type": 5,
           "required": true
         }
       ],
