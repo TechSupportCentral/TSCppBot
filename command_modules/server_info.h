@@ -19,4 +19,6 @@
 namespace server_info {
     void rules(const dpp::slashcommand_t &event, const nlohmann::json &config);
     void rule(const dpp::slashcommand_t &event, const nlohmann::json &config);
+    void suggest(const dpp::slashcommand_t &event, const nlohmann::json &config);
+    dpp::task<> suggestion_response(const dpp::slashcommand_t &event, const nlohmann::json &config);
 }

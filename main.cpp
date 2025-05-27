@@ -17,6 +17,7 @@
 #include "command_modules/db_commands.h"
 #include <fstream>
 
+// TODO better way of specifying data path
 #define DATA_PATH "/home/ben/CLionProjects/TSCppBot"
 constexpr const char* DB_FILE = DATA_PATH "/TSCppBot.db";
 
@@ -129,7 +130,7 @@ int main() {
         }
     });
 
-    bot.on_slashcommand([&config, &db_text_commands, &db_embed_commands, &db](const dpp::slashcommand_t &event) {
+    bot.on_slashcommand([&config, &db_text_commands, &db_embed_commands, &db](const dpp::slashcommand_t &event) -> dpp::task<> {
         std::string command_name = event.command.get_command_name();
         if (command_name == "add-text-command") db_commands::add_text_command_modal(event);
         else if (command_name == "add-embed-command") db_commands::add_embed_command(event, config, db_embed_commands, db);
@@ -142,9 +143,11 @@ int main() {
         else if (command_name == "uptime") meta::uptime(event);
         else if (command_name == "commit") meta::get_commit(event);
         else if (command_name == "sendmessage") meta::send_message(event);
-        else if (command_name == "announce") meta::announce(event);
+        else if (command_name == "announce") meta::announce(event, config);
         else if (command_name == "rules") server_info::rules(event, config);
         else if (command_name == "rule") server_info::rule(event, config);
+        else if (command_name == "suggest") server_info::suggest(event, config);
+        else if (command_name == "suggestion_response") co_await server_info::suggestion_response(event, config);
         else {
             auto text_command = db_text_commands.find(command_name);
             if (text_command != db_text_commands.end()) {

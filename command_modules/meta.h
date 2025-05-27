@@ -20,5 +20,5 @@ namespace meta {
     void uptime(const dpp::slashcommand_t &event);
     void get_commit(const dpp::slashcommand_t &event);
     void send_message(const dpp::slashcommand_t &event);
-    void announce(const dpp::slashcommand_t &event);
+    void announce(const dpp::slashcommand_t &event, const nlohmann::json &config);
 }

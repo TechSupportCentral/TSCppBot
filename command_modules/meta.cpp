@@ -44,10 +44,11 @@ void meta::get_commit(const dpp::slashcommand_t &event) {
 }
 
 void meta::send_message(const dpp::slashcommand_t &event) {
-    event.reply(std::get<std::string>(event.get_parameter("message")));
+    event.owner->message_create(dpp::message(event.command.channel_id, std::get<std::string>(event.get_parameter("message"))));
+    event.reply(dpp::message("Message sent").set_flags(dpp::m_ephemeral));
 }
 
-void meta::announce(const dpp::slashcommand_t &event) {
+void meta::announce(const dpp::slashcommand_t &event, const nlohmann::json &config) {
     dpp::embed embed = dpp::embed().set_color(0x00A0A0).
     set_description(std::get<std::string>(event.get_parameter("message")));
     try {
@@ -59,9 +60,16 @@ void meta::announce(const dpp::slashcommand_t &event) {
     try {
         dpp::snowflake ping_role_id = std::get<dpp::snowflake>(event.get_parameter("ping"));
         dpp::message message = dpp::message(event.command.channel_id, embed);
-        message.set_content(std::string("<@&") + std::to_string(ping_role_id) + '>');
-        event.reply(message);
+        if (ping_role_id == static_cast<dpp::snowflake>(config["everyone_ping_role_id"])) {
+            message.set_content("@everyone");
+            message.set_allowed_mentions(true, true, true);
+        } else {
+            message.set_content(std::string("<@&") + std::to_string(ping_role_id) + '>');
+            message.set_allowed_mentions(true, true);
+        }
+        event.owner->message_create(message);
     } catch (const std::bad_variant_access& e) {
-        event.reply(dpp::message(event.command.channel_id, embed));
+        event.owner->message_create(dpp::message(event.command.channel_id, embed));
     }
+    event.reply(dpp::message("Announcement sent").set_flags(dpp::m_ephemeral));
 }
