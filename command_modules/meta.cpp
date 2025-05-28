@@ -54,7 +54,7 @@ void meta::announce(const dpp::slashcommand_t &event, const nlohmann::json &conf
     try {
         std::string title = std::get<std::string>(event.get_parameter("title"));
         embed.set_title(title);
-    } catch (const std::bad_variant_access& e) {
+    } catch (const std::bad_variant_access&) {
         embed.set_title("Announcement");
     }
     try {
@@ -68,7 +68,7 @@ void meta::announce(const dpp::slashcommand_t &event, const nlohmann::json &conf
             message.set_allowed_mentions(true, true);
         }
         event.owner->message_create(message);
-    } catch (const std::bad_variant_access& e) {
+    } catch (const std::bad_variant_access&) {
         event.owner->message_create(dpp::message(event.command.channel_id, embed));
     }
     event.reply(dpp::message("Announcement sent").set_flags(dpp::m_ephemeral));

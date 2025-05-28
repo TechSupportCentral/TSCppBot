@@ -31,6 +31,7 @@ int main() {
     int status = sqlite3_open(DB_FILE, &db);
     if (status != 0) {
         std::cout << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
+        return 1;
     }
 
     std::unordered_map<std::string, db_commands::text_command> db_text_commands;
@@ -133,11 +134,11 @@ int main() {
     bot.on_slashcommand([&config, &db_text_commands, &db_embed_commands, &db](const dpp::slashcommand_t &event) -> dpp::task<> {
         std::string command_name = event.command.get_command_name();
         if (command_name == "add-text-command") db_commands::add_text_command_modal(event);
-        else if (command_name == "add-embed-command") db_commands::add_embed_command(event, config, db_embed_commands, db);
+        else if (command_name == "add-embed-command") co_await db_commands::add_embed_command(event, config, db_embed_commands, db);
         else if (command_name == "add-embed-command-field") db_commands::add_embed_command_field_modal(event, db_embed_commands);
         else if (command_name == "remove-embed-command-field") db_commands::remove_embed_command_field_menu(event, db_embed_commands, db);
         else if (command_name == "edit-embed-command-field") db_commands::edit_embed_command_field_menu(event, db_embed_commands, db);
-        else if (command_name == "remove-db-command") db_commands::remove_command(event, config, db_text_commands, db_embed_commands, db);
+        else if (command_name == "remove-db-command") co_await db_commands::remove_command(event, config, db_text_commands, db_embed_commands, db);
         else if (command_name == "db-command-list") db_commands::get_commands(event, db_text_commands, db_embed_commands);
         else if (command_name == "ping") meta::ping(event);
         else if (command_name == "uptime") meta::uptime(event);
@@ -147,7 +148,7 @@ int main() {
         else if (command_name == "rules") server_info::rules(event, config);
         else if (command_name == "rule") server_info::rule(event, config);
         else if (command_name == "suggest") server_info::suggest(event, config);
-        else if (command_name == "suggestion_response") co_await server_info::suggestion_response(event, config);
+        else if (command_name == "suggestion-respond") co_await server_info::suggestion_response(event, config);
         else {
             auto text_command = db_text_commands.find(command_name);
             if (text_command != db_text_commands.end()) {
@@ -166,8 +167,8 @@ int main() {
         if (event.custom_id == "remove_field_select") db_commands::remove_embed_command_field(event, db_embed_commands, db);
         else if (event.custom_id == "edit_field_select") db_commands::edit_embed_command_field_modal(event, db);
     });
-    bot.on_form_submit([&config, &db_text_commands, &db_embed_commands, &db](const dpp::form_submit_t &event) {
-        if (event.custom_id == "add_text_command_form") db_commands::add_text_command(event, config, db_text_commands, db);
+    bot.on_form_submit([&config, &db_text_commands, &db_embed_commands, &db](const dpp::form_submit_t &event) -> dpp::task<> {
+        if (event.custom_id == "add_text_command_form") co_await db_commands::add_text_command(event, config, db_text_commands, db);
         else if (event.custom_id.substr(0, 14) == "add_field_form") db_commands::add_embed_command_field(event, db_embed_commands, db);
         else if (event.custom_id.substr(0, 15) == "edit_field_form") db_commands::edit_embed_command_field(event, db_embed_commands, db);
     });

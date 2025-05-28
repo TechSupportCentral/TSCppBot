@@ -29,8 +29,8 @@ namespace db_commands {
     };
 
     void add_text_command_modal(const dpp::slashcommand_t &event);
-    void add_text_command(const dpp::form_submit_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, sqlite3 *db);
-    void add_embed_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
+    dpp::task<> add_text_command(const dpp::form_submit_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, sqlite3 *db);
+    dpp::task<> add_embed_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
     void add_embed_command_field_modal(const dpp::slashcommand_t &event, const std::unordered_map<std::string, embed_command> &embed_commands);
     void add_embed_command_field(const dpp::form_submit_t &event, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
     void remove_embed_command_field_menu(const dpp::slashcommand_t &event, const std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
@@ -38,6 +38,6 @@ namespace db_commands {
     void edit_embed_command_field_menu(const dpp::slashcommand_t &event, const std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
     void edit_embed_command_field_modal(const dpp::select_click_t &event, sqlite3 *db);
     void edit_embed_command_field(const dpp::form_submit_t &event, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
-    void remove_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
+    dpp::task<> remove_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db);
     void get_commands(const dpp::slashcommand_t &event, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands);
 }

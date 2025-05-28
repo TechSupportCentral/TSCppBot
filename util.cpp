@@ -17,11 +17,11 @@
 #include <vector>
 
 std::string util::seconds_to_fancytime(unsigned int seconds, const unsigned short int granularity) {
-    const std::map<const char*, int> INTERVALS = {
-        {"days", 86400},
-        {"hours", 3600},
-        {"minutes", 60},
-        {"seconds", 1}
+    const std::map<const char*, unsigned int> INTERVALS = {
+        {" days", 86400},
+        {" hours", 3600},
+        {" minutes", 60},
+        {" seconds", 1}
     };
     std::vector<std::string> time_units;
 
@@ -41,7 +41,7 @@ std::string util::seconds_to_fancytime(unsigned int seconds, const unsigned shor
         }
 
         // Add unit string to list
-        time_units.push_back(std::to_string(unit_amount) + ' ' + UNIT_NAME);
+        time_units.push_back(std::to_string(unit_amount) + UNIT_NAME);
         // Remove plural "s" if there is only one of this unit
         if (unit_amount == 1) {
             time_units.back().pop_back();
@@ -61,15 +61,14 @@ std::string util::seconds_to_fancytime(unsigned int seconds, const unsigned shor
         // If there are at least three units in the list, separate them by commas with a final "and"
         default:
             // Start with first value
-            std::string fancyTime = time_units.front();
+            std::string fancytime = time_units.front();
             // Add middle values with commas
             for (int i = 1; i < time_units.size() - 1; i++) {
-                fancyTime += ", " + time_units[i];
+                fancytime += ", " + time_units[i];
             }
             // Add final value with "and". Yes, we do Oxford Commas in this house!
-            fancyTime += ", and " + time_units.back();
-
-            return fancyTime;
+            fancytime += ", and " + time_units.back();
+            return fancytime;
     }
 }
 
@@ -111,46 +110,37 @@ bool util::valid_command_name(const std::string_view command_name) {
     return valid;
 }
 
-std::tuple<util::command_search_result, util::command_search_result, dpp::snowflake> util::find_command(dpp::cluster* bot, const nlohmann::json &config, const std::string &command_name) {
+dpp::task<std::pair<util::command_search_result, dpp::snowflake>> util::find_command(dpp::cluster* bot, const nlohmann::json &config, const std::string command_name) {
     dpp::snowflake command_id(0);
+    command_search_result result = COMMAND_NOT_FOUND;
 
-    command_search_result global_status = WAITING;
-    bot->global_commands_get([&command_name, &command_id, &global_status](const dpp::confirmation_callback_t& data) {
-        if (data.is_error()) {
-            global_status = ERROR;
-        } else {
-            for (const auto &command: std::get<dpp::slashcommand_map>(data.value) | std::views::values) {
-                if (command.name == command_name) {
-                    global_status = COMMAND_FOUND;
-                    command_id = command.id;
-                    break;
-                }
-            }
-            if (global_status == WAITING) global_status = COMMAND_NOT_FOUND;
+    dpp::confirmation_callback_t global_search = co_await bot->co_global_commands_get();
+    if (global_search.is_error()) {
+        co_return {ERROR, command_id};
+    }
+    for (const auto &command: std::get<dpp::slashcommand_map>(global_search.value) | std::views::values) {
+        if (command.name == command_name) {
+            result = GLOBAL_COMMAND_FOUND;
+            command_id = command.id;
+            break;
         }
-    });
-    while (global_status == WAITING) {}
-
-    if (global_status == COMMAND_FOUND) {
-        return {COMMAND_FOUND, COMMAND_NOT_FOUND, command_id};
     }
 
-    command_search_result guild_status = WAITING;
-    bot->guild_commands_get(config["guild_id"], [&command_name, &command_id, &guild_status](const dpp::confirmation_callback_t& data) {
-        if (data.is_error()) {
-            guild_status = ERROR;
-        } else {
-            for (const auto &command: std::get<dpp::slashcommand_map>(data.value) | std::views::values) {
-                if (command.name == command_name) {
-                    guild_status = COMMAND_FOUND;
-                    command_id = command.id;
-                    break;
-                }
-            }
-            if (guild_status == WAITING) guild_status = COMMAND_NOT_FOUND;
-        }
-    });
-    while (guild_status == WAITING) {}
+    if (result == GLOBAL_COMMAND_FOUND) {
+        co_return {result, command_id};
+    }
 
-    return {global_status, guild_status, command_id};
+    dpp::confirmation_callback_t guild_search = co_await bot->co_guild_commands_get(config["guild_id"]);
+    if (guild_search.is_error()) {
+        co_return {ERROR, command_id};
+    }
+    for (const auto &command: std::get<dpp::slashcommand_map>(guild_search.value) | std::views::values) {
+        if (command.name == command_name) {
+            result = GUILD_COMMAND_FOUND;
+            command_id = command.id;
+            break;
+        }
+    }
+
+    co_return {result, command_id};
 }

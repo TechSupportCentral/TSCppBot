@@ -100,7 +100,7 @@
       "mod_only": false
     },
     {
-      "name": "suggestion_response",
+      "name": "suggestion-respond",
       "description": "Respond to a suggestion",
       "options": [
         {
