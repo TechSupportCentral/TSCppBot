@@ -151,6 +151,7 @@ int main() {
         else if (command_name == "rule") server_info::rule(event, config);
         else if (command_name == "suggest") server_info::suggest(event, config);
         else if (command_name == "suggestion-respond") co_await server_info::suggestion_response(event, config);
+        else if (command_name == "create-ticket") co_await server_info::create_ticket(event, config);
         else {
             auto text_command = db_text_commands.find(command_name);
             if (text_command != db_text_commands.end()) {

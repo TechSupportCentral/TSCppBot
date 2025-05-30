@@ -81,7 +81,7 @@ void meta::remindme(const dpp::slashcommand_t &event, sqlite3* db) {
     const time_t now = time(nullptr);
     const time_t seconds = util::short_time_string_to_seconds(std::get<std::string>(event.get_parameter("time")));
     if (seconds == -1) {
-        event.edit_original_response(dpp::message(std::string("`")
+        event.edit_original_response(dpp::message(std::string("Time string `")
         + std::get<std::string>(event.get_parameter("time")) + "` is not in the correct format.\n"
         + "It should look something like `1d2h3m4s` (1 day, 2 hours, 3 minutes, and 4 seconds)."));
         return;

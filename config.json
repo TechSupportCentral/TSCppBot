@@ -1,7 +1,16 @@
 {
   "bot_token": "Insert token here",
   "guild_id": 854429523973636147,
-  "everyone_ping_role_id": 854429523973636147,
+  "role_ids": {
+    "owner": 854429524304724007,
+    "moderator": 854429524304724002,
+    "trial_mod": 854429524304724000,
+    "support_team": 854429524304723999,
+    "bump_reminder": 854429523973636155,
+    "og": 854429523973636151,
+    "muted": 854429524304724003,
+    "everyone": 854429523973636147
+  },
   "public_channel_ids": {
     "general_support": 854429524657176597,
     "software_support": 854429524657176599,
@@ -17,6 +26,7 @@
   },
   "log_channel_ids": {
     "suggestion_list": 854429524798996483,
+    "tickets": 854429524798996480,
     "mod_log": 854429525147385889
   },
   "rules": [

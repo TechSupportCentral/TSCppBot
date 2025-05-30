@@ -52,6 +52,7 @@ void server_info::suggest(const dpp::slashcommand_t &event, const nlohmann::json
 }
 
 dpp::task<> server_info::suggestion_response(const dpp::slashcommand_t &event, const nlohmann::json &config) {
+    // Send "thinking" response to allow time for Discord API
     dpp::async thinking = event.co_thinking();
     dpp::snowflake message_id = std::stoull(std::get<std::string>(event.get_parameter("suggestion_id")));
     dpp::confirmation_callback_t suggestion = co_await event.owner->co_message_get(message_id, config["log_channel_ids"]["suggestion_list"]);
@@ -84,4 +85,27 @@ dpp::task<> server_info::suggestion_response(const dpp::slashcommand_t &event, c
     event.owner->message_edit(message);
     co_await thinking;
     event.edit_original_response(dpp::message("Successfully responded to suggestion."));
+}
+
+dpp::task<> server_info::create_ticket(const dpp::slashcommand_t &event, const nlohmann::json &config) {
+    // Send "thinking" response to allow time for Discord API
+    dpp::async thinking = event.co_thinking(true);
+    // Create private thread for ticket
+    std::string title = std::get<std::string>(event.get_parameter("title"));
+    dpp::snowflake channel_id = config["log_channel_ids"]["tickets"];
+    dpp::confirmation_callback_t confirmation = co_await event.owner->co_thread_create
+    (title, channel_id, 10080, dpp::CHANNEL_PRIVATE_THREAD, false, 0);
+    if (confirmation.is_error()) {
+        co_await thinking;
+        event.edit_original_response(dpp::message("Failed to create ticket channel."));
+        co_return;
+    }
+    dpp::thread thread = std::get<dpp::thread>(confirmation.value);
+    // Mention moderators to add them to ticket and notify them at the same time
+    event.owner->message_create(dpp::message(thread.id, event.command.get_issuing_user().get_mention()
+    + ", your ticket has been created. Please explain your rationale and wait for a <@&"
+    + static_cast<std::string>(config["role_ids"]["muted"]) + "> to respond.").set_allowed_mentions(true, true));
+    // Notify user that ticket was successfully created
+    co_await thinking;
+    event.edit_original_response(dpp::message(std::string("Ticket created successfully at ") + thread.get_mention()));
 }

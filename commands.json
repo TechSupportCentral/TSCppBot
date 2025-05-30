@@ -65,7 +65,7 @@
       "options": [
         {
           "name": "time",
-          "description": "Amount of time to be reminded in.\nFor example: `1d2h3m4s` (1 day, 2 hours, 3 minutes, and 4 seconds)",
+          "description": "Amount of time to be reminded in. For example: 1d2h3m4s (1 day, 2 hours, 3 minutes, and 4 seconds)",
           "type": 3,
           "required": true
         },
@@ -143,6 +143,21 @@
       ],
       "global": false,
       "admin_only": true
+    },
+    {
+      "name": "create-ticket",
+      "description": "Open a moderation ticket",
+      "options": [
+        {
+          "name": "title",
+          "description": "Title of the ticket",
+          "type": 3,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": false
     }
   ],
   "db_commands": [
