@@ -15,6 +15,7 @@
 #pragma once
 #include <string>
 #include <dpp/dpp.h>
+#include <sqlite3.h>
 
 namespace util {
     enum command_search_result {
@@ -24,8 +25,18 @@ namespace util {
         ERROR
     };
 
-    std::string seconds_to_fancytime(unsigned int seconds, unsigned short int granularity);
+    struct reminder {
+        int64_t id;
+        time_t start_time;
+        time_t end_time;
+        dpp::snowflake user;
+        std::string text;
+    };
+
+    std::string seconds_to_fancytime(unsigned long long int seconds, unsigned short int granularity);
+    time_t short_time_string_to_seconds(const std::string& str);
     std::string sql_escape_string(std::string_view str, bool wrap_single_quotes = false);
     bool valid_command_name(std::string_view command_name);
     dpp::task<std::pair<command_search_result, dpp::snowflake>> find_command(dpp::cluster* bot, const nlohmann::json &config, std::string command_name);
+    dpp::job remind(dpp::cluster* bot, sqlite3* db, reminder reminder);
 }

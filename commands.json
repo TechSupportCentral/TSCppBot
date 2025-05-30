@@ -58,6 +58,25 @@
       ],
       "global": false,
       "admin_only": true
+    },
+    {
+      "name": "remindme",
+      "description": "Remind yourself of something",
+      "options": [
+        {
+          "name": "time",
+          "description": "Amount of time to be reminded in.\nFor example: `1d2h3m4s` (1 day, 2 hours, 3 minutes, and 4 seconds)",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "reminder",
+          "description": "What you're reminding yourself of",
+          "type": 3,
+          "required": false
+        }
+      ],
+      "global": true
     }
   ],
   "server_info": [

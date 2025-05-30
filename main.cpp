@@ -15,6 +15,7 @@
 #include "command_modules/meta.h"
 #include "command_modules/server_info.h"
 #include "command_modules/db_commands.h"
+#include "util.h"
 #include <fstream>
 
 // TODO better way of specifying data path
@@ -145,6 +146,7 @@ int main() {
         else if (command_name == "commit") meta::get_commit(event);
         else if (command_name == "sendmessage") meta::send_message(event);
         else if (command_name == "announce") meta::announce(event, config);
+        else if (command_name == "remindme") meta::remindme(event, db);
         else if (command_name == "rules") server_info::rules(event, config);
         else if (command_name == "rule") server_info::rule(event, config);
         else if (command_name == "suggest") server_info::suggest(event, config);
@@ -173,7 +175,7 @@ int main() {
         else if (event.custom_id.substr(0, 15) == "edit_field_form") db_commands::edit_embed_command_field(event, db_embed_commands, db);
     });
 
-    bot.on_ready([&bot, &commands, &config, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
+    bot.on_ready([&bot, &commands, &config, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
         if (dpp::run_once<struct register_bot_commands>()) {
             std::vector<dpp::slashcommand> global_commands;
             std::vector<dpp::slashcommand> tsc_commands;
@@ -236,6 +238,41 @@ int main() {
             bot.guild_bulk_command_create(tsc_commands, config["guild_id"]);
         }
         bot.set_presence(dpp::presence(dpp::ps_online, dpp::at_watching, "TSC"));
+
+        // Resume remaining reminders
+        std::vector<util::reminder> reminder_list;
+        char* error_message;
+        sqlite3_exec(db, "SELECT id, start_time, end_time, user, text FROM reminders;",
+            [](void* reminder_list, int column_count, char** column_values, char** column_names) -> int {
+                auto reminders = static_cast<std::vector<util::reminder>*>(reminder_list);
+                util::reminder reminder;
+                reminder.id = strtoll(column_values[0], nullptr, 10);
+                reminder.start_time = strtoll(column_values[1], nullptr, 10);
+                reminder.end_time = strtoll(column_values[2], nullptr, 10);
+                reminder.user = strtoull(column_values[3], nullptr, 10);
+                reminder.text = column_values[4];
+                reminders->push_back(reminder);
+                return 0;
+            },
+        &reminder_list, &error_message);
+        if (error_message != nullptr) {
+            std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+            sqlite3_free(error_message);
+        }
+        for (const util::reminder& reminder : reminder_list) {
+            std::string log_message = std::string("[") + dpp::utility::current_date_time() + "] INFO: ";
+            if (reminder.end_time < time(nullptr)) {
+                log_message += "Belated";
+            } else {
+                log_message += "Resuming";
+            }
+            log_message += " reminder of " + util::seconds_to_fancytime(reminder.end_time - reminder.start_time, 4);
+            if (const dpp::user* user = dpp::find_user(reminder.user); user != nullptr) {
+                log_message += " from " + user->username;
+            }
+            std::cout << log_message << std::endl;
+            util::remind(&bot, db, reminder);
+        }
     });
 
     bot.start(dpp::st_wait);

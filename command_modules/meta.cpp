@@ -26,7 +26,8 @@ void meta::uptime(const dpp::slashcommand_t &event) {
 }
 
 void meta::get_commit(const dpp::slashcommand_t &event) {
-    event.thinking(true); // Show "thinking" status in case git takes more than 500ms to run
+    // Show "thinking" status in case git takes more than 500ms to run
+    event.thinking(true);
     std::string commit_hash;
     // Run git show in the current directory to get the current commit
     dpp::utility::exec("git", {"show", "-s", "--oneline"},
@@ -72,4 +73,49 @@ void meta::announce(const dpp::slashcommand_t &event, const nlohmann::json &conf
         event.owner->message_create(dpp::message(event.command.channel_id, embed));
     }
     event.reply(dpp::message("Announcement sent").set_flags(dpp::m_ephemeral));
+}
+
+void meta::remindme(const dpp::slashcommand_t &event, sqlite3* db) {
+    // Send "thinking" response to allow time for DB operation
+    event.thinking(true);
+    const time_t now = time(nullptr);
+    const time_t seconds = util::short_time_string_to_seconds(std::get<std::string>(event.get_parameter("time")));
+    if (seconds == -1) {
+        event.edit_original_response(dpp::message(std::string("`")
+        + std::get<std::string>(event.get_parameter("time")) + "` is not in the correct format.\n"
+        + "It should look something like `1d2h3m4s` (1 day, 2 hours, 3 minutes, and 4 seconds)."));
+        return;
+    }
+
+    // Build reminder object from command context
+    util::reminder reminder;
+    reminder.start_time = now;
+    reminder.end_time = now + seconds;
+    reminder.user = event.command.get_issuing_user().id;
+    try {
+        reminder.text = std::get<std::string>(event.get_parameter("reminder"));
+    } catch (const std::bad_variant_access&) {
+        reminder.text = "No description provided.";
+    }
+    // Add reminder to DB
+    char* error_message;
+    sqlite3_exec(db, (std::string("INSERT INTO reminders VALUES (NULL, ") + std::to_string(reminder.start_time)
+    + ", " + std::to_string(reminder.end_time) + ", '" + std::to_string(reminder.user) + "', "
+    + util::sql_escape_string(reminder.text, true) + ");").c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message("Failed to add reminder to database."));
+        return;
+    }
+    reminder.id = sqlite3_last_insert_rowid(db);
+
+    // Sleep (on another thread) for reminder duration
+    util::remind(event.owner, db, reminder);
+    // Let log and user know the timer started
+    std::string fancytime = util::seconds_to_fancytime(seconds, 4);
+    std::cout << "[" << dpp::utility::current_date_time() << "] INFO: Starting reminder of "
+    << fancytime << " from " << event.command.get_issuing_user().username << std::endl;
+    event.edit_original_response(dpp::message(std::string("I will remind you in ")
+    + fancytime + " (<t:" + std::to_string(reminder.end_time) + ":F>)."));
 }

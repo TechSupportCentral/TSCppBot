@@ -14,6 +14,7 @@
  */
 #pragma once
 #include <dpp/dpp.h>
+#include <sqlite3.h>
 
 namespace meta {
     void ping(const dpp::slashcommand_t &event);
@@ -21,4 +22,5 @@ namespace meta {
     void get_commit(const dpp::slashcommand_t &event);
     void send_message(const dpp::slashcommand_t &event);
     void announce(const dpp::slashcommand_t &event, const nlohmann::json &config);
+    void remindme(const dpp::slashcommand_t &event, sqlite3* db);
 }

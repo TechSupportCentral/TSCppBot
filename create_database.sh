@@ -34,4 +34,12 @@ CREATE TABLE embed_commands(
     footer_icon_url TEXT,
     fields TEXT
 ) WITHOUT ROWID;
+
+CREATE TABLE reminders(
+    id INTEGER PRIMARY KEY ASC,
+    start_time INTEGER,
+    end_time INTEGER,
+    user TEXT,
+    text TEXT
+) STRICT;
 "
