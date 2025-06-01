@@ -12,9 +12,8 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#pragma once
-#include <dpp/dpp.h>
+#include "template.h"
 
-namespace _template {
-    void example_command(const dpp::slashcommand_t &event);
+void template_ns::example_command(const dpp::slashcommand_t &event) {
+    event.reply("Hello, world!");
 }

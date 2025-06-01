@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.30)
 project(TSCppBot)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-file(GLOB COMMAND_MODULE_SOURCE "command_modules/*.cpp")
-add_executable(TSCppBot main.cpp util.cpp ${COMMAND_MODULE_SOURCE})
+file(GLOB COMMAND_MODULE_SOURCE "src/command_modules/*.cpp")
+add_executable(TSCppBot src/main.cpp src/util.cpp ${COMMAND_MODULE_SOURCE})
 
 find_package(DPP REQUIRED)
 target_link_libraries(TSCppBot ${DPP_LIBRARIES})

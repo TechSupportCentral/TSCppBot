@@ -43,7 +43,7 @@ void db_commands::add_text_command_modal(const dpp::slashcommand_t &event) {
             .set_id("add_text_command_content")
             .set_type(dpp::cot_text)
             .set_min_length(1)
-            .set_max_length(4000)
+            .set_max_length(2000)
             .set_placeholder("What does the bot say?")
             .set_default_value("")
             .set_text_style(dpp::text_paragraph)
@@ -68,7 +68,7 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
     std::string command_name = std::get<std::string>(event.components[0].components[0].value);
     if (!util::is_valid_command_name(command_name)) {
         co_await thinking;
-        event.edit_original_response(dpp::message("Command name can only include lowercase letters, numbers, dash, or underscore, must not start with a number, and must be 32 characters or less."));
+        event.edit_original_response(dpp::message("Command name can only include lowercase letters, numbers, dash, or underscore, and must not start with a number."));
         co_return;
     }
     // Make sure command doesn't already exist
@@ -147,7 +147,7 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
     std::string command_name = std::get<std::string>(event.get_parameter("command_name"));
     if (!util::is_valid_command_name(command_name)) {
         co_await thinking;
-        event.edit_original_response(dpp::message("Command name can only include lowercase letters, numbers, dash, or underscore, must not start with a number, and must be 32 characters or less."));
+        event.edit_original_response(dpp::message("Command name can only include lowercase letters, numbers, dash, or underscore, and must not start with a number."));
         co_return;
     }
     // Make sure command doesn't already exist
