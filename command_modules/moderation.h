@@ -1,4 +1,4 @@
-/* meta: Commands related to the bot itself
+/* moderation: Commands related to server moderation
  * Copyright 2025 Ben Westover <me@benthetechguy.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -14,14 +14,8 @@
  */
 #pragma once
 #include <dpp/dpp.h>
-#include <sqlite3.h>
 
-namespace meta {
-    void ping(const dpp::slashcommand_t &event);
-    void uptime(const dpp::slashcommand_t &event);
-    void get_commit(const dpp::slashcommand_t &event);
-    void send_message(const dpp::slashcommand_t &event);
-    dpp::task<> dm(const dpp::slashcommand_t &event, const nlohmann::json &config);
-    void announce(const dpp::slashcommand_t &event, const nlohmann::json &config);
-    void remindme(const dpp::slashcommand_t &event, sqlite3* db);
+namespace moderation {
+    dpp::task<> create_ticket(const dpp::slashcommand_t &event, const nlohmann::json &config);
+    dpp::task<> purge(const dpp::slashcommand_t &event, const nlohmann::json &config);
 }

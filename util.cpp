@@ -16,6 +16,11 @@
 #include <map>
 #include <vector>
 
+void util::log(const std::string_view severity, const std::string_view message) {
+    std::cout << "[" << dpp::utility::current_date_time() << "] " << severity << ": " << message << std::endl;
+    LOG_FILE << "[" << dpp::utility::current_date_time() << "] " << severity << ": " << message << std::endl;
+}
+
 std::string util::seconds_to_fancytime(unsigned long long int seconds, const unsigned short int granularity) {
     const std::map<const char*, unsigned int> INTERVALS = {
         {" days", 86400},
@@ -184,15 +189,15 @@ dpp::job util::remind(dpp::cluster* bot, sqlite3* db, const reminder reminder) {
     if (reminder.end_time < now) {
         // If reminder end time has already passed, send the user a belated reminder notification
         dpp::embed embed = dpp::embed().set_title("Belated Reminder").set_color(0x00A0A0)
-        .set_description(std::string("Sorry, the bot was offline when you were supposed to get your reminder of ")
-        + seconds_to_fancytime(reminder.end_time - reminder.start_time, 4) + " from <t:"
-        + std::to_string(reminder.start_time) + ">.").add_field("Reminder", reminder.text);
+        .set_description(std::format("Sorry, the bot was offline when you were supposed to get your reminder of {} from <t:{}>.",
+        seconds_to_fancytime(reminder.end_time - reminder.start_time, 4), reminder.start_time))
+        .add_field("Reminder", reminder.text);
         bot->direct_message_create(reminder.user, dpp::message(embed));
         // Remove reminder from DB
         char* error_message;
-        sqlite3_exec(db, (std::string("DELETE FROM reminders WHERE id=") + std::to_string(reminder.id) + ';').c_str(), nullptr, nullptr, &error_message);
+        sqlite3_exec(db, std::format("DELETE FROM reminders WHERE id={};", reminder.id).c_str(), nullptr, nullptr, &error_message);
         if (error_message != nullptr) {
-            std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+            log("SQL ERROR", error_message);
             sqlite3_free(error_message);
         }
         co_return;
@@ -201,15 +206,15 @@ dpp::job util::remind(dpp::cluster* bot, sqlite3* db, const reminder reminder) {
     co_await bot->co_sleep(reminder.end_time - now);
 
     // Send user reminder notification
-    dpp::embed embed = dpp::embed().set_title(std::string("Reminder of "
-    + seconds_to_fancytime(reminder.end_time - reminder.start_time, 4)
-    + " from <t:") + std::to_string(reminder.start_time) + '>').set_color(0x00A0A0).set_description(reminder.text);
+    dpp::embed embed = dpp::embed().set_title(std::format("Reminder of {} from <t:{}>",
+    seconds_to_fancytime(reminder.end_time - reminder.start_time, 4),
+    reminder.start_time)).set_color(0x00A0A0).set_description(reminder.text);
     bot->direct_message_create(reminder.user, dpp::message(embed));
     // Remove reminder from DB
     char* error_message;
-    sqlite3_exec(db, (std::string("DELETE FROM reminders WHERE id=") + std::to_string(reminder.id) + ';').c_str(), nullptr, nullptr, &error_message);
+    sqlite3_exec(db, std::format("DELETE FROM reminders WHERE id={};", reminder.id).c_str(), nullptr, nullptr, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        log("SQL ERROR", error_message);
         sqlite3_free(error_message);
     }
 }

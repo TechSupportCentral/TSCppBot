@@ -60,6 +60,26 @@
       "admin_only": true
     },
     {
+      "name": "dm",
+      "description": "Send a private message as the bot",
+      "options": [
+        {
+          "name": "user",
+          "description": "Member to send the message to",
+          "type": 6,
+          "required": true
+        },
+        {
+          "name": "message",
+          "description": "Message to send",
+          "type": 3,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": true
+    },
+    {
       "name": "remindme",
       "description": "Remind yourself of something",
       "options": [
@@ -79,6 +99,52 @@
       "global": true
     }
   ],
+  "moderation": [
+    {
+      "name": "create-ticket",
+      "description": "Open a moderation ticket",
+      "options": [
+        {
+          "name": "title",
+          "description": "Title of the ticket",
+          "type": 3,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": false
+    },
+    {
+      "name": "purge",
+      "description": "Delete a number of messages at once",
+      "options": [
+        {
+          "name": "messages",
+          "description": "Number of messages to delete",
+          "type": 4,
+          "required": true,
+          "min_value": 2,
+          "max_value": 100
+        },
+        {
+          "name": "channel",
+          "description": "Channel to delete messages from",
+          "type": 7,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "description": "Reason for deleting the messages",
+          "type": 3,
+          "required": false
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": true
+    }
+  ],
   "server_info": [
     {
       "name": "rules",
@@ -96,7 +162,8 @@
           "name": "rule",
           "description": "Number of rule to look at",
           "type": 4,
-          "required": true
+          "required": true,
+          "min_value": 1
         }
       ],
       "global": false,
@@ -143,21 +210,6 @@
       ],
       "global": false,
       "admin_only": true
-    },
-    {
-      "name": "create-ticket",
-      "description": "Open a moderation ticket",
-      "options": [
-        {
-          "name": "title",
-          "description": "Title of the ticket",
-          "type": 3,
-          "required": true
-        }
-      ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": false
     }
   ],
   "db_commands": [

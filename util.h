@@ -18,6 +18,8 @@
 #include <sqlite3.h>
 
 namespace util {
+    inline std::ofstream LOG_FILE;
+
     enum command_search_result {
         GLOBAL_COMMAND_FOUND,
         GUILD_COMMAND_FOUND,
@@ -33,6 +35,7 @@ namespace util {
         std::string text;
     };
 
+    void log(std::string_view severity, std::string_view message);
     std::string seconds_to_fancytime(unsigned long long int seconds, unsigned short int granularity);
     time_t short_time_string_to_seconds(const std::string& str);
     std::string sql_escape_string(std::string_view str, bool wrap_single_quotes = false);

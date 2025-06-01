@@ -13,26 +13,84 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #include "command_modules/meta.h"
+#include "command_modules/moderation.h"
 #include "command_modules/server_info.h"
 #include "command_modules/db_commands.h"
 #include "util.h"
 #include <fstream>
 
-// TODO better way of specifying data path
-#define DATA_PATH "/home/ben/CLionProjects/TSCppBot"
-constexpr const char* DB_FILE = DATA_PATH "/TSCppBot.db";
+std::string DATA_PATH;
+std::string DB_FILE;
 
-int main() {
-    // Load config and command files
-    nlohmann::json config = nlohmann::json::parse(std::ifstream(DATA_PATH "/config.json"));
-    nlohmann::json commands = nlohmann::json::parse(std::ifstream(DATA_PATH "/commands.json"));
+/**
+ * Start the bot with state initialized from DB and set up event handlers
+ * @param argc Number of arguments passed
+ * @param argv List of arguments passed (data path, DB filename, log filename)
+ * @return 0 if successful, 1 for invalid data path, 2 for invalid DB filename, 3 for invalid log filename.
+ */
+int main(int argc, char* argv[]) {
+    // Set data path from first argument if it exists
+    if (argc > 1) {
+        // If the first char of the first arg is a dash, assume user is trying to specify an option
+        if (argv[1][0] == '-') {
+            std::cout << "Usage: " << argv[0] << " [data path] [DB filename] [log filename]" << std::endl
+                      << "Default data path is the parent of the current directory." << std::endl
+                      << "Default DB filename is TSCppBot.db." << std::endl
+                      << "Default log filename is based on the current time." << std::endl
+                      << "If a specified log file already exists, its contents will be appended to." << std::endl;
+            return 0;
+        }
+        // Make sure data path is a valid dir
+        DATA_PATH = argv[1];
+        if (std::error_code err; !std::filesystem::is_directory(DATA_PATH, err)) {
+            std::cerr << "Invalid data path \"" << DATA_PATH << "\": " << err.message() << std::endl;
+            return 1;
+        }
+    } else {
+        DATA_PATH = "..";
+    }
+    // Set DB file from second argument if it exists
+    if (argc > 2) {
+        DB_FILE = DATA_PATH + '/' + argv[2];
+    } else {
+        DB_FILE = DATA_PATH + "/TSCppBot.db";
+    }
+    // Set logfile from third argument if it exists
+    if (argc > 3) {
+        util::LOG_FILE.open(DATA_PATH + '/' + argv[3], std::ios::app);
+        if (util::LOG_FILE.fail()) {
+            std::cerr << "Failed to open log file \"" << DATA_PATH << '/' << argv[3] << "\" for writing: " << strerror(errno) << std::endl;
+            return 3;
+        }
+    } else {
+        // Create log dir
+        try {
+            std::filesystem::create_directory(DATA_PATH + "/log");
+        } catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << e.what() << std::endl;
+            return 3;
+        }
+        // Create log filename from current date and time
+        const time_t now = time(nullptr);
+        char log_file[32];
+        strftime(log_file, 32, "log/TSCppBot_%Y%m%d-%H.%M.log", localtime(&now));
+        // Try to create/replace logfile
+        util::LOG_FILE.open(DATA_PATH + '/' + log_file);
+        if (util::LOG_FILE.fail()) {
+            std::cerr << "Failed to create log file \"" << DATA_PATH << '/' << log_file << "\": " << strerror(errno) << std::endl;
+            return 3;
+        }
+    }
 
+    // Load config file
+    // TODO opening and closing json files
+    nlohmann::json config = nlohmann::json::parse(std::ifstream(DATA_PATH + "/config.json"));
     // Initialize DB
     sqlite3 *db;
-    int status = sqlite3_open(DB_FILE, &db);
+    int status = sqlite3_open(DB_FILE.c_str(), &db);
     if (status != 0) {
-        std::cout << "Failed to open database: " << sqlite3_errmsg(db) << std::endl;
-        return 1;
+        std::cerr << "Failed to open database \"" << DB_FILE << "\": " << sqlite3_errmsg(db) << std::endl;
+        return 2;
     }
 
     std::unordered_map<std::string, db_commands::text_command> db_text_commands;
@@ -53,7 +111,7 @@ int main() {
         },
     &db_text_commands, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
     }
     // Get DB embed command list
@@ -88,13 +146,13 @@ int main() {
                 auto add_fields = [](const std::string &fields, db_commands::embed_command &embed_command) {
                     // Open new DB connection to avoid messing with existing one
                     sqlite3 *db;
-                    int status = sqlite3_open(DB_FILE, &db);
+                    int status = sqlite3_open(DB_FILE.c_str(), &db);
                     if (status != 0) {
                         return;
                     }
                     // Execute query
                     char* error_message;
-                    sqlite3_exec(db, (std::string("SELECT * FROM embed_command_fields WHERE id IN (") + fields + ");").c_str(),
+                    sqlite3_exec(db, std::format("SELECT * FROM embed_command_fields WHERE id IN ({});", fields).c_str(),
                         [](void* command, int column_count, char** column_values, char** column_names) -> int {
                             auto embed_command = static_cast<db_commands::embed_command*>(command);
                             embed_command->embed.add_field(
@@ -105,7 +163,7 @@ int main() {
                         },
                     &embed_command, &error_message);
                     if (error_message != nullptr) {
-                        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+                        util::log("SQL ERROR", error_message);
                         sqlite3_free(error_message);
                     }
                     // Close new DB connection
@@ -119,7 +177,7 @@ int main() {
         },
     &db_embed_commands, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
     }
 
@@ -128,7 +186,7 @@ int main() {
     dpp::cluster bot(config["bot_token"], intents);
     bot.on_log([](const dpp::log_t& event) {
         if (event.severity >= dpp::ll_info) {
-            std::cout << "[" << dpp::utility::current_date_time() << "] " << dpp::utility::loglevel(event.severity) << ": " << event.message << std::endl;
+            util::log(dpp::utility::loglevel(event.severity), event.message);
         }
     });
 
@@ -146,12 +204,14 @@ int main() {
         else if (command_name == "commit") meta::get_commit(event);
         else if (command_name == "sendmessage") meta::send_message(event);
         else if (command_name == "announce") meta::announce(event, config);
+        else if (command_name == "dm") co_await meta::dm(event, config);
         else if (command_name == "remindme") meta::remindme(event, db);
         else if (command_name == "rules") server_info::rules(event, config);
         else if (command_name == "rule") server_info::rule(event, config);
         else if (command_name == "suggest") server_info::suggest(event, config);
         else if (command_name == "suggestion-respond") co_await server_info::suggestion_response(event, config);
-        else if (command_name == "create-ticket") co_await server_info::create_ticket(event, config);
+        else if (command_name == "create-ticket") co_await moderation::create_ticket(event, config);
+        else if (command_name == "purge") co_await moderation::purge(event, config);
         else {
             auto text_command = db_text_commands.find(command_name);
             if (text_command != db_text_commands.end()) {
@@ -161,7 +221,7 @@ int main() {
                 if (embed_command != db_embed_commands.end()) {
                     event.reply(dpp::message(event.command.channel_id, embed_command->second.embed));
                 } else {
-                    std::cout << "[" << dpp::utility::current_date_time() << "] INFO: Command /" << command_name << " does not exist." << std::endl;
+                    util::log("INFO", std::format("Command /{} does not exist.", command_name));
                 }
             }
         }
@@ -176,11 +236,11 @@ int main() {
         else if (event.custom_id.substr(0, 15) == "edit_field_form") db_commands::edit_embed_command_field(event, db_embed_commands, db);
     });
 
-    bot.on_ready([&bot, &commands, &config, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
+    bot.on_ready([&bot, &config, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
         if (dpp::run_once<struct register_bot_commands>()) {
             std::vector<dpp::slashcommand> global_commands;
             std::vector<dpp::slashcommand> tsc_commands;
-            for (auto &category : commands) {
+            for (auto &category : nlohmann::json::parse(std::ifstream(DATA_PATH + "/commands.json"))) {
                 for (auto &command : category) {
                     dpp::slashcommand slash_command(
                         command["name"].get<std::string>(),
@@ -200,6 +260,12 @@ int main() {
                         }
                         if (option["max_value"] != nullptr) {
                             command_option.set_max_value(option["max_value"].get<int64_t>());
+                        }
+                        if (option["min_length"] != nullptr) {
+                            command_option.set_min_length(option["min_length"].get<int64_t>());
+                        }
+                        if (option["max_length"] != nullptr) {
+                            command_option.set_max_length(option["max_length"].get<int64_t>());
                         }
                         slash_command.add_option(command_option);
                     }
@@ -257,11 +323,11 @@ int main() {
             },
         &reminder_list, &error_message);
         if (error_message != nullptr) {
-            std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+            util::log("SQL ERROR", error_message);
             sqlite3_free(error_message);
         }
         for (const util::reminder& reminder : reminder_list) {
-            std::string log_message = std::string("[") + dpp::utility::current_date_time() + "] INFO: ";
+            std::string log_message;
             if (reminder.end_time < time(nullptr)) {
                 log_message += "Belated";
             } else {
@@ -271,7 +337,7 @@ int main() {
             if (const dpp::user* user = dpp::find_user(reminder.user); user != nullptr) {
                 log_message += " from " + user->username;
             }
-            std::cout << log_message << std::endl;
+            util::log("INFO", log_message);
             util::remind(&bot, db, reminder);
         }
     });

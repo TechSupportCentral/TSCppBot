@@ -77,7 +77,7 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
         case util::GLOBAL_COMMAND_FOUND:
         case util::GUILD_COMMAND_FOUND:
             co_await thinking;
-            event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` already exists."));
+            event.edit_original_response(dpp::message(std::format("Command `{}` already exists.", command_name)));
             co_return;
         case util::ERROR:
             co_await thinking;
@@ -105,14 +105,13 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
     }
     // Add command to database
     char* error_message;
-    sqlite3_exec(db, (std::string("INSERT INTO text_commands VALUES ('") + name + "', '"
-                          + description + "', '" + value + "', '" + global + "');").c_str(),
-    nullptr, nullptr, &error_message);
+    sqlite3_exec(db, std::format("INSERT INTO text_commands VALUES ('{}', '{}', '{}', '{}');",
+    name, description, value, global).c_str(), nullptr, nullptr, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         co_await thinking;
-        event.edit_original_response(dpp::message(std::string("Failed to add command `") + command_name + "` to database."));
+        event.edit_original_response(dpp::message(std::format("Failed to add command `{}` to database.", command_name)));
         co_return;
     }
 
@@ -130,8 +129,15 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
     } else {
         event.owner->guild_command_create(slash_command, config["guild_id"]);
     }
+    // Send log
+    dpp::user command_user = event.command.get_issuing_user();
+    dpp::embed embed = dpp::embed().set_color(dpp::colors::green).set_title("Database Command Added")
+    .set_thumbnail(command_user.get_avatar_url()).add_field("Added by", command_user.global_name, false)
+    .add_field("Command name", command_name, true).add_field("Command type", "Text", true);
+    event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
+    // Send confirmation
     co_await thinking;
-    event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` added successfully."));
+    event.edit_original_response(dpp::message(std::format("Command `{}` added successfully.", command_name)));
 }
 
 dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
@@ -150,7 +156,7 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
         case util::GLOBAL_COMMAND_FOUND:
         case util::GUILD_COMMAND_FOUND:
             co_await thinking;
-            event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` already exists."));
+            event.edit_original_response(dpp::message(std::format("Command `{}` already exists.", command_name)));
             co_return;
         case util::ERROR:
             co_await thinking;
@@ -276,15 +282,13 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
     command.embed.set_footer(footer);
 
     // Add command to database
-    std::string sql_query = std::string("INSERT INTO embed_commands VALUES (") + sql_row.command_name + ", "
-    + sql_row.command_description + ", " + sql_row.command_is_global + ", " + sql_row.title + ", " + sql_row.url
-    + ", " + sql_row.description + ", " + sql_row.thumbnail + ", " + sql_row.image + ", " + sql_row.video
-    + ", " + sql_row.color + ", " + sql_row.timestamp + ", " + sql_row.author_name + ", " + sql_row.author_url
-    + ", " + sql_row.author_icon_url + ", " + sql_row.footer_text + ", " + sql_row.footer_icon_url + ", NULL);";
     char* error_message;
-    sqlite3_exec(db, sql_query.c_str(), nullptr, nullptr, &error_message);
+    sqlite3_exec(db, std::format("INSERT INTO embed_commands VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, NULL);",
+    sql_row.command_name, sql_row.command_description, sql_row.command_is_global, sql_row.title, sql_row.url, sql_row.description,
+    sql_row.thumbnail, sql_row.image, sql_row.video, sql_row.color, sql_row.timestamp, sql_row.author_name, sql_row.author_url,
+    sql_row.author_icon_url, sql_row.footer_text, sql_row.footer_icon_url).c_str(), nullptr, nullptr, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         co_await thinking;
         event.edit_original_response(dpp::message(std::string("Failed to add command `") + command_name + "` to database."));
@@ -305,19 +309,26 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
     } else {
         event.owner->guild_command_create(slash_command, config["guild_id"]);
     }
+    // Send log
+    dpp::user command_user = event.command.get_issuing_user();
+    dpp::embed embed = dpp::embed().set_color(dpp::colors::green).set_title("Database Command Added")
+    .set_thumbnail(command_user.get_avatar_url()).add_field("Added by", command_user.global_name, false)
+    .add_field("Command name", command_name, true).add_field("Command type", "Embed", true);
+    event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
+    // Send confirmation
     co_await thinking;
-    event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` added successfully."));
+    event.edit_original_response(dpp::message(std::format("Command `{}` added successfully.", command_name)));
 }
 
 void db_commands::add_embed_command_field_modal(const dpp::slashcommand_t &event, const std::unordered_map<std::string, embed_command> &embed_commands) {
     // Make sure command exists
     std::string command_name = std::get<std::string>(event.get_parameter("name"));
     if (!embed_commands.contains(command_name)) {
-        event.reply(dpp::message(std::string("Embed-based DB command `") + command_name + "` not found.").set_flags(dpp::m_ephemeral));
+        event.reply(dpp::message(std::format("Embed-based DB command `{}` not found.", command_name)).set_flags(dpp::m_ephemeral));
         return;
     }
 
-    event.dialog(dpp::interaction_modal_response(std::string("add_field_form") + ',' + command_name, std::string("Add a field in ") + command_name)
+    event.dialog(dpp::interaction_modal_response(std::string("add_field_form,") + command_name, std::string("Add a field in ") + command_name)
         .add_component(dpp::component()
             .set_label("Field Title")
             .set_id("add_field_title")
@@ -360,7 +371,7 @@ void db_commands::add_embed_command_field(const dpp::form_submit_t &event, std::
     if (auto command_iterator = embed_commands.find(command_name); command_iterator != embed_commands.end()) {
         command = command_iterator->second;
     } else {
-        event.edit_original_response(dpp::message(std::string("Embed-based DB command `") + command_name + "` not found."));
+        event.edit_original_response(dpp::message(std::format("Embed-based DB command `{}` not found.", command_name)));
         return;
     }
 
@@ -380,11 +391,12 @@ void db_commands::add_embed_command_field(const dpp::form_submit_t &event, std::
 
     // Add field to database
     char* error_message;
-    sqlite3_exec(db, (std::string("INSERT INTO embed_command_fields VALUES (NULL, ") + title + ", " + value + ", " + is_inline + ");").c_str(), nullptr, nullptr, &error_message);
+    sqlite3_exec(db, std::format("INSERT INTO embed_command_fields VALUES (NULL, {}, {}, {});",
+    title, value, is_inline).c_str(), nullptr, nullptr, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
-        event.edit_original_response(dpp::message(std::string("Failed to edit command `") + command_name + "` in database."));
+        event.edit_original_response(dpp::message(std::format("Failed to edit command `{}` in database.", command_name)));
         return;
     }
     int64_t field_id = sqlite3_last_insert_rowid(db);
@@ -392,7 +404,7 @@ void db_commands::add_embed_command_field(const dpp::form_submit_t &event, std::
     // Get current field IDs from command in DB
     std::string sql_command_name = util::sql_escape_string(command_name, true);
     std::string field_ids = "'";
-    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + sql_command_name + ';').c_str(),
+    sqlite3_exec(db, std::format("SELECT fields FROM embed_commands WHERE command_name={};", sql_command_name).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
             auto output_string = static_cast<std::string*>(output);
             if (column_values[0] != nullptr) {
@@ -402,9 +414,9 @@ void db_commands::add_embed_command_field(const dpp::form_submit_t &event, std::
         },
     &field_ids, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
-        event.edit_original_response(dpp::message(std::string("Failed to edit command `") + command_name + "` in database."));
+        event.edit_original_response(dpp::message(std::format("Failed to edit command `{}` in database.", command_name)));
         return;
     }
     // Add field ID to command in DB
@@ -412,17 +424,18 @@ void db_commands::add_embed_command_field(const dpp::form_submit_t &event, std::
         field_ids += ',';
     }
     field_ids += std::to_string(field_id) + '\'';
-    sqlite3_exec(db, (std::string("UPDATE embed_commands SET fields = ") + field_ids + "WHERE command_name=" + sql_command_name + ';').c_str(), nullptr, nullptr, &error_message);
+    sqlite3_exec(db, std::format("UPDATE embed_commands SET fields = {} WHERE command_name={};",
+    field_ids, sql_command_name).c_str(), nullptr, nullptr, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
-        event.edit_original_response(dpp::message(std::string("Failed to edit command `") + command_name + "` in database."));
+        event.edit_original_response(dpp::message(std::format("Failed to edit command `{}` in database.", command_name)));
         return;
     }
 
     // Add field to command in command list
     embed_commands.insert_or_assign(command_name, command);
-    event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` edited successfully."));
+    event.edit_original_response(dpp::message(std::format("Command `{}` edited successfully.", command_name)));
 }
 
 void db_commands::remove_embed_command_field_menu(const dpp::slashcommand_t &event, std::unordered_map<std::string, embed_command> const &embed_commands, sqlite3 *db) {
@@ -431,14 +444,14 @@ void db_commands::remove_embed_command_field_menu(const dpp::slashcommand_t &eve
     // Make sure command exists
     std::string command_name = std::get<std::string>(event.get_parameter("name"));
     if (!embed_commands.contains(command_name)) {
-        event.edit_original_response(dpp::message(std::string("Embed-based DB command `") + command_name + "` not found."));
+        event.edit_original_response(dpp::message(std::format("Embed-based DB command `{}` not found.", command_name)));
         return;
     }
 
     // Get current field IDs from command in DB
     std::string field_ids;
     char* error_message;
-    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+    sqlite3_exec(db, std::format("SELECT fields FROM embed_commands WHERE command_name={};", util::sql_escape_string(command_name, true)).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
             auto field_ids = static_cast<std::string*>(output);
             if (column_values[0] != nullptr) {
@@ -448,7 +461,7 @@ void db_commands::remove_embed_command_field_menu(const dpp::slashcommand_t &eve
         },
     &field_ids, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         event.edit_original_response(dpp::message("Failed to get field from database."));
         return;
@@ -456,7 +469,7 @@ void db_commands::remove_embed_command_field_menu(const dpp::slashcommand_t &eve
 
     // Construct Discord select menu component with field titles
     std::map<std::string, std::string> fields;
-    sqlite3_exec(db, (std::string("SELECT id, title FROM embed_command_fields WHERE id IN (") + field_ids + ");").c_str(),
+    sqlite3_exec(db, std::format("SELECT id, title FROM embed_command_fields WHERE id IN ({});", field_ids).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
             auto output_map = static_cast<std::map<std::string, std::string>*>(output);
             output_map->emplace(column_values[0], column_values[1]);
@@ -464,19 +477,19 @@ void db_commands::remove_embed_command_field_menu(const dpp::slashcommand_t &eve
         },
     &fields, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         event.edit_original_response(dpp::message("Failed to get field from database."));
         return;
     }
     if (fields.empty()) {
-        event.edit_original_response(dpp::message(std::string("Embed for command `") + command_name + "` has no embeds."));
+        event.edit_original_response(dpp::message(std::format("Embed for command `{}` has no embeds.", command_name)));
         return;
     }
     dpp::component select_menu = dpp::component().set_type(dpp::cot_selectmenu)
     .set_placeholder("Select a field to remove").set_id("remove_field_select");
     for (const auto& [id, title] : fields) {
-        select_menu.add_select_option(dpp::select_option(title, id + '\n' + command_name));
+        select_menu.add_select_option(dpp::select_option(title, id + command_name));
     }
     event.edit_original_response(dpp::message().add_component(dpp::component().add_component(select_menu)));
 }
@@ -485,30 +498,30 @@ void db_commands::remove_embed_command_field(const dpp::select_click_t &event, s
     // Send "thinking" response to allow time for DB operation
     event.reply(dpp::ir_deferred_update_message, "");
     // Get context info from selection value
-    std::string id, command_name;
+    int64_t field_id;
+    std::string command_name;
     std::istringstream context(event.values[0]);
-    std::getline(context, id);
-    int field_id = std::stoi(id);
-    std::getline(context, command_name);
+    context >> field_id;
+    context >> command_name;
     embed_command command = embed_commands.find(command_name)->second;
-    std::vector<int> field_ids;
+    std::vector<int64_t> field_ids;
     // Get field IDs
     char* error_message;
-    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+    sqlite3_exec(db, std::format("SELECT fields FROM embed_commands WHERE command_name={};", util::sql_escape_string(command_name, true)).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
-            auto output_vec = static_cast<std::vector<int>*>(output);
+            auto output_vec = static_cast<std::vector<int64_t>*>(output);
             if (column_values[0] != nullptr) {
                 std::istringstream field_ids(column_values[0]);
                 std::string id;
                 while (std::getline(field_ids, id, ',')) {
-                    output_vec->push_back(std::stoi(id));
+                    output_vec->push_back(std::stoll(id));
                 }
             }
             return 0;
         },
     &field_ids, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         event.edit_response("Failed to get field from database.");
         return;
@@ -516,7 +529,7 @@ void db_commands::remove_embed_command_field(const dpp::select_click_t &event, s
 
     // Make sure there are still fields left
     if (field_ids.empty()) {
-        event.edit_response(std::string("Embed for command `") + command_name + "` has no fields.");
+        event.edit_response(std::format("Embed for command `{}` has no fields.", command_name));
         return;
     }
     // Make sure this field hasn't already been removed
@@ -534,9 +547,9 @@ void db_commands::remove_embed_command_field(const dpp::select_click_t &event, s
     field_ids.erase(field_ids.begin() + field_index);
 
     // Remove field from database
-    sqlite3_exec(db, (std::string("DELETE FROM embed_command_fields WHERE id=") + id + ';').c_str(), nullptr, nullptr, &error_message);
+    sqlite3_exec(db, std::format("DELETE FROM embed_command_fields WHERE id={};", field_id).c_str(), nullptr, nullptr, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         event.edit_response("Failed to remove field from database.");
         return;
@@ -553,18 +566,19 @@ void db_commands::remove_embed_command_field(const dpp::select_click_t &event, s
         }
         new_field_ids += std::to_string(field_ids.back()) + '\'';
     }
-    sqlite3_exec(db, (std::string("UPDATE embed_commands SET fields = ") + new_field_ids + " WHERE command_name=" + util::sql_escape_string(command_name, true) + ';').c_str(), nullptr, nullptr, &error_message);
+    sqlite3_exec(db, std::format("UPDATE embed_commands SET fields = {} WHERE command_name={};",
+    new_field_ids, util::sql_escape_string(command_name, true)).c_str(), nullptr, nullptr, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
-        event.edit_response(std::string("Failed to edit command `") + command_name + "` in database.");
+        event.edit_response(std::format("Failed to edit command `{}` in database.", command_name));
         return;
     }
 
     // Remove field from command in command list
     command.embed.fields.erase(command.embed.fields.begin() + field_index);
     embed_commands.insert_or_assign(command_name, command);
-    event.edit_response(std::string("Command `") + command_name + "` edited successfully.");
+    event.edit_response(std::format("Command `{}` edited successfully.", command_name));
 }
 
 void db_commands::edit_embed_command_field_menu(const dpp::slashcommand_t &event, const std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
@@ -573,14 +587,14 @@ void db_commands::edit_embed_command_field_menu(const dpp::slashcommand_t &event
     // Make sure command exists
     std::string command_name = std::get<std::string>(event.get_parameter("name"));
     if (!embed_commands.contains(command_name)) {
-        event.edit_original_response(dpp::message(std::string("Embed-based DB command `") + command_name + "` not found."));
+        event.edit_original_response(dpp::message(std::format("Embed-based DB command `{}` not found.", command_name)));
         return;
     }
 
     // Get current field IDs from command in DB
     std::string field_ids;
     char* error_message;
-    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+    sqlite3_exec(db, std::format("SELECT fields FROM embed_commands WHERE command_name={};", util::sql_escape_string(command_name, true)).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
             auto field_ids = static_cast<std::string*>(output);
             if (column_values[0] != nullptr) {
@@ -590,7 +604,7 @@ void db_commands::edit_embed_command_field_menu(const dpp::slashcommand_t &event
         },
     &field_ids, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         event.edit_original_response(dpp::message("Failed to get field from database."));
         return;
@@ -598,7 +612,7 @@ void db_commands::edit_embed_command_field_menu(const dpp::slashcommand_t &event
 
     // Construct Discord select menu component with field titles
     std::map<std::string, std::string> fields;
-    sqlite3_exec(db, (std::string("SELECT id, title FROM embed_command_fields WHERE id IN (") + field_ids + ");").c_str(),
+    sqlite3_exec(db, std::format("SELECT id, title FROM embed_command_fields WHERE id IN ({});", field_ids).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
             auto output_map = static_cast<std::map<std::string, std::string>*>(output);
             output_map->emplace(column_values[0], column_values[1]);
@@ -606,50 +620,51 @@ void db_commands::edit_embed_command_field_menu(const dpp::slashcommand_t &event
         },
     &fields, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         event.edit_original_response(dpp::message("Failed to get field from database."));
         return;
     }
     if (fields.empty()) {
-        event.edit_original_response(dpp::message(std::string("Embed for command `") + command_name + "` has no fields."));
+        event.edit_original_response(dpp::message(std::format("Embed for command `{}` has no fields.", command_name)));
         return;
     }
     dpp::component select_menu = dpp::component().set_type(dpp::cot_selectmenu)
     .set_placeholder("Select field to edit").set_id("edit_field_select");
     for (const auto& [id, title] : fields) {
-        select_menu.add_select_option(dpp::select_option(title, id + '\n' + command_name));
+        select_menu.add_select_option(dpp::select_option(title, id + command_name));
     }
     event.edit_original_response(dpp::message().add_component(dpp::component().add_component(select_menu)));
 }
 
 void db_commands::edit_embed_command_field_modal(const dpp::select_click_t &event, sqlite3 *db) {
     // Get context vars
-    std::string id, command_name;
+    int64_t field_id;
+    std::string command_name;
     std::istringstream context(event.values[0]);
-    std::getline(context, id);
-    std::getline(context, command_name);
+    context >> field_id;
+    context >> command_name;
 
     // Get selected field info
     char* error_message;
-    std::array<std::string, 3> field;
-    sqlite3_exec(db, (std::string("SELECT title, value, is_inline FROM embed_command_fields WHERE id = ") + id + ';').c_str(),
+    std::string field[3];
+    sqlite3_exec(db, std::format("SELECT title, value, is_inline FROM embed_command_fields WHERE id = {};", field_id).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
-            auto field = static_cast<std::array<std::string, 3>*>(output);
-            field->at(0) = column_values[0];
-            field->at(1) = column_values[1];
-            field->at(2) = column_values[2];
+            auto field = static_cast<std::string*>(output);
+            field[0] = column_values[0];
+            field[1] = column_values[1];
+            field[2] = column_values[2];
             return 0;
         },
-    &field, &error_message);
+    field, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         event.reply("Failed to get field from database.");
         return;
     }
 
-    event.dialog(dpp::interaction_modal_response(std::string("edit_field_form") + ',' + id + ',' + command_name, std::string("Edit a field in ") + command_name)
+    event.dialog(dpp::interaction_modal_response(std::format("edit_field_form{}{}", field_id, command_name), std::string("Edit a field in ") + command_name)
         .add_component(dpp::component()
             .set_label("New Field Title")
             .set_id("edit_field_title")
@@ -685,11 +700,11 @@ void db_commands::edit_embed_command_field(const dpp::form_submit_t &event, std:
     // Send "thinking" response to allow time for DB operation
     event.reply(dpp::ir_deferred_update_message, "");
     // Get context info
-    std::istringstream context(event.custom_id.substr(16));
-    std::string id, command_name;
-    std::getline(context, id, ',');
-    int field_id = std::stoi(id);
-    std::getline(context, command_name, ',');
+    std::istringstream context(event.custom_id.substr(15));
+    int64_t field_id;
+    std::string command_name;
+    context >> field_id;
+    context >> command_name;
     embed_command command = embed_commands.find(command_name)->second;
     // Get values from modal
     std::string title = std::get<std::string>(event.components[0].components[0].value);
@@ -703,33 +718,33 @@ void db_commands::edit_embed_command_field(const dpp::form_submit_t &event, std:
 
     // Edit field info in DB
     char* error_message;
-    sqlite3_exec(db, (std::string("UPDATE embed_command_fields SET title = ") + util::sql_escape_string(title, true)
-                          + ", value = " + util::sql_escape_string(value, true) + ", is_inline = " + is_inline
-                          + " WHERE id=" + id + ';').c_str(), nullptr, nullptr, &error_message);
+    sqlite3_exec(db, std::format("UPDATE embed_command_fields SET title = {}, value = {}, is_inline = {} WHERE id={};",
+    util::sql_escape_string(title, true), util::sql_escape_string(value, true),
+    is_inline, field_id).c_str(), nullptr, nullptr, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
-        event.edit_response(std::string("Failed to edit command `") + command_name + "` in database.");
+        event.edit_response(std::format("Failed to edit command `{}` in database.", command_name));
         return;
     }
 
-    std::vector<int> field_ids;
+    std::vector<int64_t> field_ids;
     // Get field IDs for command
-    sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+    sqlite3_exec(db, std::format("SELECT fields FROM embed_commands WHERE command_name={};", util::sql_escape_string(command_name, true)).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
-            auto output_vec = static_cast<std::vector<int>*>(output);
+            auto output_vec = static_cast<std::vector<int64_t>*>(output);
             if (column_values[0] != nullptr) {
                 std::istringstream field_ids(column_values[0]);
                 std::string id;
                 while (std::getline(field_ids, id, ',')) {
-                    output_vec->push_back(std::stoi(id));
+                    output_vec->push_back(std::stoll(id));
                 }
             }
             return 0;
         },
     &field_ids, &error_message);
     if (error_message != nullptr) {
-        std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+        util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
         event.edit_response("Failed to get field from database.");
         return;
@@ -742,7 +757,7 @@ void db_commands::edit_embed_command_field(const dpp::form_submit_t &event, std:
         }
     }
     if (field_index == -1) {
-        event.edit_response(std::string("Could not find field in command `") + command_name + "`.");
+        event.edit_response(std::format("Could not find field in command `{}`.", command_name));
         return;
     }
 
@@ -751,7 +766,7 @@ void db_commands::edit_embed_command_field(const dpp::form_submit_t &event, std:
     command.embed.fields[field_index].value = value;
     command.embed.fields[field_index].is_inline = (is_inline == "'true'");
     embed_commands.insert_or_assign(command_name, command);
-    event.edit_response(std::string("Command `") + command_name + "` edited successfully.");
+    event.edit_response(std::format("Command `{}` edited successfully.", command_name));
 }
 
 dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
@@ -764,12 +779,13 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
     if (text_command_it != text_commands.end()) {
         // Remove command from database
         char* error_message;
-        sqlite3_exec(db, (std::string("DELETE FROM text_commands WHERE name=") + util::sql_escape_string(command_name, true) + ';').c_str(), nullptr, nullptr, &error_message);
+        sqlite3_exec(db, std::format("DELETE FROM text_commands WHERE name={};",
+        util::sql_escape_string(command_name, true)).c_str(), nullptr, nullptr, &error_message);
         if (error_message != nullptr) {
-            std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+            util::log("SQL ERROR", error_message);
             sqlite3_free(error_message);
             co_await thinking;
-            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from database."));
+            event.edit_original_response(dpp::message(std::format("Failed to remove command `{}` from database.", command_name)));
             co_return;
         }
 
@@ -781,13 +797,20 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
             event.owner->guild_command_delete(search_result.second, config["guild_id"]);
         } else {
             co_await thinking;
-            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
+            event.edit_original_response(dpp::message(std::format("Failed to remove command `{}` from Discord.", command_name)));
             co_return;
         }
         text_commands.erase(text_command_it);
 
+        // Send log
+        dpp::user command_user = event.command.get_issuing_user();
+        dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Database Command Removed")
+        .set_thumbnail(command_user.get_avatar_url()).add_field("Removed by", command_user.global_name, false)
+        .add_field("Command name", command_name, true).add_field("Command type", "Text", true);
+        event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
+        // Send confirmation
         co_await thinking;
-        event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` removed successfully."));
+        event.edit_original_response(dpp::message(std::format("Command `{}` removed successfully.", command_name)));
         co_return;
     }
     auto embed_command_it = embed_commands.find(command_name);
@@ -795,7 +818,8 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
         // Get fields that are part of this embed command
         std::string fields;
         char* error_message;
-        sqlite3_exec(db, (std::string("SELECT fields FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(),
+        sqlite3_exec(db, std::format("SELECT fields FROM embed_commands WHERE command_name={};",
+        util::sql_escape_string(command_name, true)).c_str(),
             [](void* output, int column_count, char** column_values, char** column_names) -> int {
                 auto fields = static_cast<std::string*>(output);
                 if (column_values[0] != nullptr) {
@@ -805,29 +829,30 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
             },
         &fields, &error_message);
         if (error_message != nullptr) {
-            std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+            util::log("SQL ERROR", error_message);
             sqlite3_free(error_message);
             co_await thinking;
-            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from database."));
+            event.edit_original_response(dpp::message(std::format("Failed to remove command `{}` from database.", command_name)));
             co_return;
         }
         // Remove fields from database
-        sqlite3_exec(db, (std::string("DELETE FROM embed_command_fields WHERE id IN (") + fields + ");").c_str(), nullptr, nullptr, &error_message);
+        sqlite3_exec(db, std::format("DELETE FROM embed_command_fields WHERE id IN ({});", fields).c_str(), nullptr, nullptr, &error_message);
         if (error_message != nullptr) {
-            std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+            util::log("SQL ERROR", error_message);
             sqlite3_free(error_message);
             co_await thinking;
-            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from database."));
+            event.edit_original_response(dpp::message(std::format("Failed to remove command `{}` from database.", command_name)));
             co_return;
         }
 
         // Remove command from database
-        sqlite3_exec(db, (std::string("DELETE FROM embed_commands WHERE command_name=") + util::sql_escape_string(command_name, true) + ';').c_str(), nullptr, nullptr, &error_message);
+        sqlite3_exec(db, std::format("DELETE FROM embed_commands WHERE command_name={};",
+        util::sql_escape_string(command_name, true)).c_str(), nullptr, nullptr, &error_message);
         if (error_message != nullptr) {
-            std::cout << "[" << dpp::utility::current_date_time() << "] SQL ERROR: " << error_message << std::endl;
+            util::log("SQL ERROR", error_message);
             sqlite3_free(error_message);
             co_await thinking;
-            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from database."));
+            event.edit_original_response(dpp::message(std::format("Failed to remove command `{}` from database.", command_name)));
             co_return;
         }
 
@@ -839,18 +864,25 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
             event.owner->guild_command_delete(search_result.second, config["guild_id"]);
         } else {
             co_await thinking;
-            event.edit_original_response(dpp::message(std::string("Failed to remove command `") + command_name + "` from Discord."));
+            event.edit_original_response(dpp::message(std::format("Failed to remove command `{}` from Discord.", command_name)));
             co_return;
         }
         embed_commands.erase(embed_command_it);
 
+        // Send log
+        dpp::user command_user = event.command.get_issuing_user();
+        dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Database Command Removed")
+        .set_thumbnail(command_user.get_avatar_url()).add_field("Removed by", command_user.global_name, false)
+        .add_field("Command name", command_name, true).add_field("Command type", "Embed", true);
+        event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
+        // Send confirmation
         co_await thinking;
-        event.edit_original_response(dpp::message(std::string("Command `") + command_name + "` removed successfully."));
+        event.edit_original_response(dpp::message(std::format("Command `{}` removed successfully.", command_name)));
         co_return;
     }
     // Let user know if command doesn't exist
     co_await thinking;
-    event.edit_original_response(dpp::message(std::string("Database command `") + command_name + "` not found."));
+    event.edit_original_response(dpp::message(std::format("Database command `{}` not found.", command_name)));
 }
 
 void db_commands::get_commands(const dpp::slashcommand_t &event, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands) {

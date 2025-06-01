@@ -27,7 +27,9 @@
   "log_channel_ids": {
     "suggestion_list": 854429524798996483,
     "tickets": 854429524798996480,
-    "mod_log": 854429525147385889
+    "staff_news": 854429525147385895,
+    "mod_log": 854429525147385889,
+    "bot_dm": 854429525647687703
   },
   "rules": [
     "Be respectful to our Support Team; they provide support voluntarily for free during their own time.",

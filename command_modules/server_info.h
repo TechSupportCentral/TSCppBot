@@ -21,5 +21,4 @@ namespace server_info {
     void rule(const dpp::slashcommand_t &event, const nlohmann::json &config);
     void suggest(const dpp::slashcommand_t &event, const nlohmann::json &config);
     dpp::task<> suggestion_response(const dpp::slashcommand_t &event, const nlohmann::json &config);
-    dpp::task<> create_ticket(const dpp::slashcommand_t &event, const nlohmann::json &config);
 }
