@@ -40,7 +40,7 @@ namespace util {
         int64_t id; /**< ID for reminder in database */
         time_t start_time; /**< Time when user requested reminder */
         time_t end_time; /**< Time when notification should happen */
-        dpp::snowflake user; /**< Discord user who requested the reminder */
+        dpp::snowflake user; /**< ID of user who requested the reminder */
         std::string text; /**< Text of the reminder */
     };
 

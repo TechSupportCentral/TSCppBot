@@ -150,6 +150,36 @@
       "global": false,
       "admin_only": false,
       "mod_only": true
+    },
+    {
+      "name": "userinfo",
+      "description": "Display information about a user",
+      "options": [
+        {
+          "name": "user",
+          "description": "User to collect info on (defaults to user running the command)",
+          "type": 6,
+          "required": false
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": true
+    },
+    {
+      "name": "inviteinfo",
+      "description": "Display information about a server invite",
+      "options": [
+        {
+          "name": "code",
+          "description": "Code for invite to get information on (not the whole link)",
+          "type": 3,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": true
     }
   ],
   "server_info": [

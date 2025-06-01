@@ -87,9 +87,9 @@ dpp::task<> meta::dm(const dpp::slashcommand_t &event, const nlohmann::json &con
     }
     // Let sender know and send a log message
     dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_title("DM Sent")
-    .set_thumbnail(user.get_avatar_url()).add_field("Sent to", user.global_name, true)
+    .set_thumbnail(user.get_avatar_url()).add_field("Sent to", user.username, true)
     .add_field("User ID", std::to_string(user.id), true)
-    .add_field("Sent by", event.command.get_issuing_user().global_name, false)
+    .add_field("Sent by", event.command.member.get_nickname(), false)
     .add_field("Message:", message, false);
     event.owner->message_create(dpp::message(config["log_channel_ids"]["bot_dm"], log_embed));
     co_await thinking;

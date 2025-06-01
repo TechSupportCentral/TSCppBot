@@ -229,6 +229,8 @@ int main(int argc, char* argv[]) {
         else if (command_name == "suggestion-respond") co_await server_info::suggestion_response(event, config);
         else if (command_name == "create-ticket") co_await moderation::create_ticket(event, config);
         else if (command_name == "purge") co_await moderation::purge(event, config);
+        else if (command_name == "userinfo") moderation::userinfo(event, config);
+        else if (command_name == "inviteinfo") co_await moderation::inviteinfo(event);
         else {
             auto text_command = db_text_commands.find(command_name);
             if (text_command != db_text_commands.end()) {

@@ -130,9 +130,8 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
         event.owner->guild_command_create(slash_command, config["guild_id"]);
     }
     // Send log
-    dpp::user command_user = event.command.get_issuing_user();
     dpp::embed embed = dpp::embed().set_color(dpp::colors::green).set_title("Database Command Added")
-    .set_thumbnail(command_user.get_avatar_url()).add_field("Added by", command_user.global_name, false)
+    .set_thumbnail(event.command.member.get_avatar_url()).add_field("Added by", event.command.member.get_nickname(), false)
     .add_field("Command name", command_name, true).add_field("Command type", "Text", true);
     event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
     // Send confirmation
@@ -310,9 +309,8 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
         event.owner->guild_command_create(slash_command, config["guild_id"]);
     }
     // Send log
-    dpp::user command_user = event.command.get_issuing_user();
     dpp::embed embed = dpp::embed().set_color(dpp::colors::green).set_title("Database Command Added")
-    .set_thumbnail(command_user.get_avatar_url()).add_field("Added by", command_user.global_name, false)
+    .set_thumbnail(event.command.member.get_avatar_url()).add_field("Added by", event.command.member.get_nickname(), false)
     .add_field("Command name", command_name, true).add_field("Command type", "Embed", true);
     event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
     // Send confirmation
@@ -809,9 +807,8 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
         text_commands.erase(text_command_it);
 
         // Send log
-        dpp::user command_user = event.command.get_issuing_user();
         dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Database Command Removed")
-        .set_thumbnail(command_user.get_avatar_url()).add_field("Removed by", command_user.global_name, false)
+        .set_thumbnail(event.command.member.get_avatar_url()).add_field("Removed by", event.command.member.get_nickname(), false)
         .add_field("Command name", command_name, true).add_field("Command type", "Text", true);
         event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
         // Send confirmation
@@ -876,9 +873,8 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
         embed_commands.erase(embed_command_it);
 
         // Send log
-        dpp::user command_user = event.command.get_issuing_user();
         dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Database Command Removed")
-        .set_thumbnail(command_user.get_avatar_url()).add_field("Removed by", command_user.global_name, false)
+        .set_thumbnail(event.command.member.get_avatar_url()).add_field("Removed by", event.command.member.get_nickname(), false)
         .add_field("Command name", command_name, true).add_field("Command type", "Embed", true);
         event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
         // Send confirmation

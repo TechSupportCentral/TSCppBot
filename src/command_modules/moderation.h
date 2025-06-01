@@ -18,4 +18,6 @@
 namespace moderation {
     dpp::task<> create_ticket(const dpp::slashcommand_t &event, const nlohmann::json &config);
     dpp::task<> purge(const dpp::slashcommand_t &event, const nlohmann::json &config);
+    void userinfo(const dpp::slashcommand_t &event, const nlohmann::json &config);
+    dpp::task<> inviteinfo(const dpp::slashcommand_t &event);
 }

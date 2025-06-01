@@ -40,8 +40,7 @@ void server_info::rule(const dpp::slashcommand_t &event, const nlohmann::json &c
 
 void server_info::suggest(const dpp::slashcommand_t &event, const nlohmann::json &config) {
     std::string suggestion = std::get<std::string>(event.get_parameter("suggestion"));
-    dpp::user user = event.command.get_issuing_user();
-    dpp::embed_author author(user.global_name, "", user.get_avatar_url());
+    dpp::embed_author author(event.command.member.get_nickname(), "", event.command.member.get_avatar_url());
     dpp::embed embed = dpp::embed().set_color(dpp::colors::light_gray).set_author(author)
     .set_description(std::string("**Suggestion:** ") + suggestion).add_field("Status: Pending", "");
     event.owner->message_create(dpp::message(config["log_channel_ids"]["suggestion_list"], embed));
