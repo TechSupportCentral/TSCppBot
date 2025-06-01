@@ -23,10 +23,15 @@ std::string DATA_PATH;
 std::string DB_FILE;
 
 /**
- * Start the bot with state initialized from DB and set up event handlers
- * @param argc Number of arguments passed
- * @param argv List of arguments passed (data path, DB filename, log filename)
- * @return 0 if successful, 1 for invalid data path, 2 for invalid DB filename, 3 for invalid log filename.
+ * Start and run the bot with state initialized from DB and JSON files, and set up event handlers
+ * @param argc Number of optional arguments passed
+ * @param argv List of optional arguments passed (data path, DB filename, log filename)
+ * @return 0 if successful,
+ *         1 for invalid data path,
+ *         2 for invalid DB filename,
+ *         3 for invalid log filename,
+ *         4 for missing JSON files, or
+ *         any other value for a critical exception from D++ or the JSON parser.
  */
 int main(int argc, char* argv[]) {
     // Set data path from first argument if it exists
@@ -82,9 +87,21 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Load config file
-    // TODO opening and closing json files
-    nlohmann::json config = nlohmann::json::parse(std::ifstream(DATA_PATH + "/config.json"));
+    // Load JSON files for config and command list
+    std::ifstream config_file = std::ifstream(DATA_PATH + "/config.json");
+    if (config_file.fail()) {
+        std::cerr << "Failed to open config file \"" << DATA_PATH << "/config.json\": " << strerror(errno) << std::endl;
+        return 4;
+    }
+    std::ifstream commands_file = std::ifstream(DATA_PATH + "/commands.json");
+    if (commands_file.fail()) {
+        std::cerr << "Failed to open commands file \"" << DATA_PATH << "/commands.json\": " << strerror(errno) << std::endl;
+        return 4;
+    }
+    nlohmann::json config = nlohmann::json::parse(config_file);
+    nlohmann::json commands = nlohmann::json::parse(commands_file);
+    config_file.close();
+    commands_file.close();
     // Initialize DB
     sqlite3 *db;
     int status = sqlite3_open(DB_FILE.c_str(), &db);
@@ -236,11 +253,11 @@ int main(int argc, char* argv[]) {
         else if (event.custom_id.substr(0, 15) == "edit_field_form") db_commands::edit_embed_command_field(event, db_embed_commands, db);
     });
 
-    bot.on_ready([&bot, &config, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
+    bot.on_ready([&bot, &config, &commands, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
         if (dpp::run_once<struct register_bot_commands>()) {
             std::vector<dpp::slashcommand> global_commands;
             std::vector<dpp::slashcommand> tsc_commands;
-            for (auto &category : nlohmann::json::parse(std::ifstream(DATA_PATH + "/commands.json"))) {
+            for (auto &category : commands) {
                 for (auto &command : category) {
                     dpp::slashcommand slash_command(
                         command["name"].get<std::string>(),
