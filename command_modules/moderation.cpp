@@ -13,10 +13,8 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #include "moderation.h"
-
-#include <map>
-
 #include "../util.h"
+#include <map>
 
 dpp::task<> moderation::create_ticket(const dpp::slashcommand_t &event, const nlohmann::json &config) {
     // Send "thinking" response to allow time for Discord API

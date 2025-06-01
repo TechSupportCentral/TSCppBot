@@ -77,7 +77,7 @@ std::string util::seconds_to_fancytime(unsigned long long int seconds, const uns
     }
 }
 
-time_t util::short_time_string_to_seconds(const std::string& str) {
+time_t util::time_string_to_seconds(const std::string& str) {
     std::istringstream ss(str);
     time_t seconds = 0;
     uint32_t time;
@@ -133,19 +133,15 @@ std::string util::sql_escape_string(const std::string_view str, const bool wrap_
     return escaped_str;
 }
 
-bool util::valid_command_name(const std::string_view command_name) {
+bool util::is_valid_command_name(const std::string_view command_name) {
     bool valid = true;
     for (char c : command_name) {
-        bool is_lowercase = c >= 'a' && c <= 'z';
-        bool is_num = c >= '0' && c <= '9';
-        bool is_allowed_special_char = c == '-' || c == '_';
-
-        if (!is_lowercase && !is_num && !is_allowed_special_char) {
+        if (!std::islower(c) && !std::isdigit(c) && c != '-' && c != '_') {
             valid = false;
             break;
         }
     }
-    if (command_name.size() > 32) valid = false;
+    if (command_name.size() > 32 || std::isdigit(command_name[0])) valid = false;
     return valid;
 }
 

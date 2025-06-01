@@ -66,9 +66,9 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
     dpp::async thinking = event.co_thinking(true);
     // Make sure command name is valid
     std::string command_name = std::get<std::string>(event.components[0].components[0].value);
-    if (!util::valid_command_name(command_name)) {
+    if (!util::is_valid_command_name(command_name)) {
         co_await thinking;
-        event.edit_original_response(dpp::message("Command name can only include lowercase letters, numbers, dash, or underscore, and must be 32 characters or less."));
+        event.edit_original_response(dpp::message("Command name can only include lowercase letters, numbers, dash, or underscore, must not start with a number, and must be 32 characters or less."));
         co_return;
     }
     // Make sure command doesn't already exist
@@ -145,9 +145,9 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
     dpp::async thinking = event.co_thinking(true);
     // Make sure command name is valid
     std::string command_name = std::get<std::string>(event.get_parameter("command_name"));
-    if (!util::valid_command_name(command_name)) {
+    if (!util::is_valid_command_name(command_name)) {
         co_await thinking;
-        event.edit_original_response(dpp::message("Command name can only include lowercase letters, numbers, dash, or underscore, and must be 32 characters or less."));
+        event.edit_original_response(dpp::message("Command name can only include lowercase letters, numbers, dash, or underscore, must not start with a number, and must be 32 characters or less."));
         co_return;
     }
     // Make sure command doesn't already exist
@@ -322,7 +322,7 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
 
 void db_commands::add_embed_command_field_modal(const dpp::slashcommand_t &event, const std::unordered_map<std::string, embed_command> &embed_commands) {
     // Make sure command exists
-    std::string command_name = std::get<std::string>(event.get_parameter("name"));
+    std::string command_name = std::get<std::string>(event.get_parameter("command_name"));
     if (!embed_commands.contains(command_name)) {
         event.reply(dpp::message(std::format("Embed-based DB command `{}` not found.", command_name)).set_flags(dpp::m_ephemeral));
         return;
@@ -375,6 +375,31 @@ void db_commands::add_embed_command_field(const dpp::form_submit_t &event, std::
         return;
     }
 
+    // Get current field IDs from command in DB
+    std::string sql_command_name = util::sql_escape_string(command_name, true);
+    std::string field_ids = "'";
+    char* error_message;
+    sqlite3_exec(db, std::format("SELECT fields FROM embed_commands WHERE command_name={};", sql_command_name).c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto output_string = static_cast<std::string*>(output);
+            if (column_values[0] != nullptr) {
+                output_string->append(column_values[0]);
+            }
+            return 0;
+        },
+    &field_ids, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message(std::format("Failed to find command `{}` in database.", command_name)));
+        return;
+    }
+    // Make sure we have not reached the max number of fields for a command
+    if (std::ranges::count(field_ids, ',') >= 24) {
+        event.edit_original_response(dpp::message(std::format("Command `{}` currently has the maximum of 25 fields.", command_name)));
+        return;
+    }
+
     // Add field to embed and build SQL row based on passed parameters
     std::string field_title = std::get<std::string>(event.components[0].components[0].value);
     std::string field_value = std::get<std::string>(event.components[1].components[0].value);
@@ -390,35 +415,16 @@ void db_commands::add_embed_command_field(const dpp::form_submit_t &event, std::
     }
 
     // Add field to database
-    char* error_message;
     sqlite3_exec(db, std::format("INSERT INTO embed_command_fields VALUES (NULL, {}, {}, {});",
     title, value, is_inline).c_str(), nullptr, nullptr, &error_message);
     if (error_message != nullptr) {
         util::log("SQL ERROR", error_message);
         sqlite3_free(error_message);
-        event.edit_original_response(dpp::message(std::format("Failed to edit command `{}` in database.", command_name)));
+        event.edit_original_response(dpp::message("Failed to add field to database."));
         return;
     }
     int64_t field_id = sqlite3_last_insert_rowid(db);
 
-    // Get current field IDs from command in DB
-    std::string sql_command_name = util::sql_escape_string(command_name, true);
-    std::string field_ids = "'";
-    sqlite3_exec(db, std::format("SELECT fields FROM embed_commands WHERE command_name={};", sql_command_name).c_str(),
-        [](void* output, int column_count, char** column_values, char** column_names) -> int {
-            auto output_string = static_cast<std::string*>(output);
-            if (column_values[0] != nullptr) {
-                output_string->append(column_values[0]);
-            }
-            return 0;
-        },
-    &field_ids, &error_message);
-    if (error_message != nullptr) {
-        util::log("SQL ERROR", error_message);
-        sqlite3_free(error_message);
-        event.edit_original_response(dpp::message(std::format("Failed to edit command `{}` in database.", command_name)));
-        return;
-    }
     // Add field ID to command in DB
     if (field_ids != "'") {
         field_ids += ',';
@@ -442,7 +448,7 @@ void db_commands::remove_embed_command_field_menu(const dpp::slashcommand_t &eve
     // Send "thinking" response to allow time for DB operation
     event.thinking();
     // Make sure command exists
-    std::string command_name = std::get<std::string>(event.get_parameter("name"));
+    std::string command_name = std::get<std::string>(event.get_parameter("command_name"));
     if (!embed_commands.contains(command_name)) {
         event.edit_original_response(dpp::message(std::format("Embed-based DB command `{}` not found.", command_name)));
         return;
@@ -585,7 +591,7 @@ void db_commands::edit_embed_command_field_menu(const dpp::slashcommand_t &event
     // Send "thinking" response to allow time for DB operation
     event.thinking();
     // Make sure command exists
-    std::string command_name = std::get<std::string>(event.get_parameter("name"));
+    std::string command_name = std::get<std::string>(event.get_parameter("command_name"));
     if (!embed_commands.contains(command_name)) {
         event.edit_original_response(dpp::message(std::format("Embed-based DB command `{}` not found.", command_name)));
         return;
@@ -772,7 +778,7 @@ void db_commands::edit_embed_command_field(const dpp::form_submit_t &event, std:
 dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
     // Send "thinking" response to allow time for DB operation
     dpp::async thinking = event.co_thinking(true);
-    std::string command_name = std::get<std::string>(event.get_parameter("name"));
+    std::string command_name = std::get<std::string>(event.get_parameter("command_name"));
 
     // Get existing command
     auto text_command_it = text_commands.find(command_name);

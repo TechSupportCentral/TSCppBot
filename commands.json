@@ -16,7 +16,7 @@
       "name": "commit",
       "description": "See what git commit the bot is currently running on",
       "options": [],
-      "global": true,
+      "global": false,
       "admin_only": true
     },
     {
@@ -27,7 +27,8 @@
           "name": "message",
           "description": "Message to send",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 2000
         }
       ],
       "global": false,
@@ -41,13 +42,15 @@
           "name": "message",
           "description": "Message to send",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 4096
         },
         {
           "name": "title",
           "description": "Title for the announcement embed. Defaults to \"Announcement\"",
           "type": 3,
-          "required": false
+          "required": false,
+          "max_length": 256
         },
         {
           "name": "ping",
@@ -73,7 +76,8 @@
           "name": "message",
           "description": "Message to send",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 1024
         }
       ],
       "global": false,
@@ -93,7 +97,8 @@
           "name": "reminder",
           "description": "What you're reminding yourself of",
           "type": 3,
-          "required": false
+          "required": false,
+          "max_length": 4096
         }
       ],
       "global": true
@@ -108,7 +113,8 @@
           "name": "title",
           "description": "Title of the ticket",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 100
         }
       ],
       "global": false,
@@ -137,7 +143,8 @@
           "name": "reason",
           "description": "Reason for deleting the messages",
           "type": 3,
-          "required": false
+          "required": false,
+          "max_length": 1024
         }
       ],
       "global": false,
@@ -178,7 +185,8 @@
           "name": "suggestion",
           "description": "The suggestion to make",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 4080
         }
       ],
       "global": false,
@@ -205,7 +213,8 @@
           "name": "response",
           "description": "Response to the suggestion",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 1024
         }
       ],
       "global": false,
@@ -228,13 +237,15 @@
           "name": "command_name",
           "description": "Name of the command to create",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 32
         },
         {
           "name": "command_description",
           "description": "Description of the command to create",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 100
         },
         {
           "name": "command_is_global",
@@ -246,7 +257,8 @@
           "name": "title",
           "description": "Title for the embed to send when the command is run",
           "type": 3,
-          "required": false
+          "required": false,
+          "max_length": 256
         },
         {
           "name": "url",
@@ -258,7 +270,8 @@
           "name": "description",
           "description": "Description for the embed",
           "type": 3,
-          "required": false
+          "required": false,
+          "max_length": 4096
         },
         {
           "name": "color",
@@ -290,14 +303,14 @@
           "name": "timestamp",
           "description": "Date and time (in Unix timestamp format) to put on the bottom of the embed",
           "type": 4,
-          "min_value": 0,
           "required": false
         },
         {
           "name": "author_name",
           "description": "Author name",
           "type": 3,
-          "required": false
+          "required": false,
+          "max_length": 256
         },
         {
           "name": "author_url",
@@ -315,7 +328,8 @@
           "name": "footer_text",
           "description": "Text to put in the embed footer",
           "type": 3,
-          "required": false
+          "required": false,
+          "max_length": 2048
         },
         {
           "name": "footer_icon_url",
@@ -332,10 +346,11 @@
       "description": "Add a field to a custom embed-based database command",
       "options": [
         {
-          "name": "name",
+          "name": "command_name",
           "description": "Name of the command to modify",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 32
         }
       ],
       "global": false,
@@ -346,10 +361,11 @@
       "description": "Remove an embed field in a custom database command",
       "options": [
         {
-          "name": "name",
+          "name": "command_name",
           "description": "Name of the command to modify",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 32
         }
       ],
       "global": false,
@@ -360,10 +376,11 @@
       "description": "Edit an embed field in a custom database command",
       "options": [
         {
-          "name": "name",
+          "name": "command_name",
           "description": "Name of the command to modify",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 32
         }
       ],
       "global": false,
@@ -374,10 +391,11 @@
       "description": "Remove a database command",
       "options": [
         {
-          "name": "name",
+          "name": "command_name",
           "description": "Name of the command to modify",
           "type": 3,
-          "required": true
+          "required": true,
+          "length": 32
         }
       ],
       "global": false,
