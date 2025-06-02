@@ -79,7 +79,7 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
             co_await thinking;
             event.edit_original_response(dpp::message(std::format("Command `{}` already exists.", command_name)));
             co_return;
-        case util::ERROR:
+        case util::SEARCH_ERROR:
             co_await thinking;
             event.edit_original_response(dpp::message("Bot failed to get command list."));
             co_return;
@@ -157,7 +157,7 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
             co_await thinking;
             event.edit_original_response(dpp::message(std::format("Command `{}` already exists.", command_name)));
             co_return;
-        case util::ERROR:
+        case util::SEARCH_ERROR:
             co_await thinking;
             event.edit_original_response(dpp::message("Bot failed to get command list."));
             co_return;

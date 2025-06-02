@@ -151,12 +151,12 @@ dpp::task<std::pair<util::command_search_result, dpp::snowflake>> util::find_com
 
     dpp::confirmation_callback_t global_search = co_await bot->co_global_commands_get();
     if (global_search.is_error()) {
-        co_return {ERROR, command_id};
+        co_return {SEARCH_ERROR, command_id};
     }
-    for (const auto &command: std::get<dpp::slashcommand_map>(global_search.value) | std::views::values) {
-        if (command.name == command_name) {
+    for (const auto &command: std::get<dpp::slashcommand_map>(global_search.value)) {
+        if (command.second.name == command_name) {
             result = GLOBAL_COMMAND_FOUND;
-            command_id = command.id;
+            command_id = command.first;
             break;
         }
     }
@@ -167,12 +167,12 @@ dpp::task<std::pair<util::command_search_result, dpp::snowflake>> util::find_com
 
     dpp::confirmation_callback_t guild_search = co_await bot->co_guild_commands_get(config["guild_id"]);
     if (guild_search.is_error()) {
-        co_return {ERROR, command_id};
+        co_return {SEARCH_ERROR, command_id};
     }
-    for (const auto &command: std::get<dpp::slashcommand_map>(guild_search.value) | std::views::values) {
-        if (command.name == command_name) {
+    for (const auto &command: std::get<dpp::slashcommand_map>(guild_search.value)) {
+        if (command.second.name == command_name) {
             result = GUILD_COMMAND_FOUND;
-            command_id = command.id;
+            command_id = command.first;
             break;
         }
     }

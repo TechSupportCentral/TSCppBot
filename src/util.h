@@ -30,7 +30,7 @@ namespace util {
         GLOBAL_COMMAND_FOUND,
         GUILD_COMMAND_FOUND,
         COMMAND_NOT_FOUND,
-        ERROR
+        SEARCH_ERROR
     };
 
     /**
