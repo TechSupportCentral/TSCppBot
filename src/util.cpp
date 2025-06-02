@@ -214,3 +214,39 @@ dpp::job util::remind(dpp::cluster* bot, sqlite3* db, const reminder reminder) {
         sqlite3_free(error_message);
     }
 }
+
+dpp::job util::handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json& config, const mute mute) {
+    // Wait until mute expires, unless expiry time has already passed
+    const time_t now = time(nullptr);
+    if (mute.end_time > now) {
+        co_await bot->co_sleep(mute.end_time - now);
+    }
+    // Mark mute as inactive in DB
+    char* error_message;
+    sqlite3_exec(db, std::format("UPDATE mod_records SET active = 'false' WHERE extra_data_id={};", mute.id).c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+    }
+    // No messages sent if user has left server or is no longer muted
+    dpp::confirmation_callback_t member_conf = co_await bot->co_guild_get_member(config["guild_id"], mute.user);
+    if (member_conf.is_error()) {
+        co_return;
+    }
+    dpp::guild_member user = std::get<dpp::guild_member>(member_conf.value);
+    std::vector<dpp::snowflake> roles = user.get_roles();
+    if (std::ranges::find(roles, config["role_ids"]["muted"].get<dpp::snowflake>()) == roles.end()) {
+        co_return;
+    }
+    // Send user notification and log the unmute action
+    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::green).set_title("You have been automatically unmuted.");
+    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_title("Mute removed")
+                                       .add_field("User unmuted", user.get_nickname(), true)
+                                       .add_field("User ID", mute.user.str(), true)
+                                       .add_field("Reason", "Automatic unmute", false);
+    dpp::confirmation_callback_t dm_conf = co_await bot->co_direct_message_create(mute.user, dpp::message(dm_embed));
+    if (dm_conf.is_error()) {
+        log_embed.set_footer(dpp::embed_footer().set_text("Failed to DM user"));
+    }
+    bot->message_create(dpp::message(config["log_channel_ids"]["mod_log"], dm_embed));
+}

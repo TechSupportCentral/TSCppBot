@@ -45,6 +45,16 @@ namespace util {
     };
 
     /**
+     * Details for a mute action on a user
+     */
+    struct mute {
+        int64_t id; /**< ID for mute in database */
+        dpp::snowflake user; /**< ID of user who is muted */
+        time_t start_time; /**< Time when user was muted */
+        time_t end_time; /**< Time when mute expires */
+    };
+
+    /**
      * Print a message to the console and logfile, including the current date and time.
      * @param severity Severity of the event to log
      * @param message Message to log
@@ -97,4 +107,14 @@ namespace util {
      * @param reminder reminder to send
      */
     dpp::job remind(dpp::cluster* bot, sqlite3* db, reminder reminder);
+
+    /**
+     * Wait for the duration of a mute, then unmute the user and send a notification and log
+     * @param bot Cluster to do these actions with
+     * @param db SQLite DB pointer with the database to deactivate mute in
+     * @param config JSON bot config data
+     * @param mute mute info to use
+     * @return
+     */
+    dpp::job handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json& config, mute mute);
 }

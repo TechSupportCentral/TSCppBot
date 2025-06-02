@@ -42,4 +42,20 @@ CREATE TABLE reminders(
     user TEXT,
     text TEXT
 ) STRICT;
+
+CREATE TABLE mutes(
+    id INTEGER PRIMARY KEY ASC,
+    start_time INTEGER,
+    end_time INTEGER
+);
+
+CREATE TABLE mod_records(
+    id TEXT PRIMARY KEY,
+    type TEXT,
+    moderator TEXT,
+    user TEXT,
+    reason TEXT,
+    active TEXT,
+    extra_data_id INTEGER
+) WITHOUT ROWID;
 "

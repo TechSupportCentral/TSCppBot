@@ -359,6 +359,52 @@ int main(int argc, char* argv[]) {
             util::log("INFO", log_message);
             util::remind(&bot, db, reminder);
         }
+
+        // Resume remaining mutes
+        std::vector<util::mute> mute_list;
+        sqlite3_exec(db, "SELECT user, extra_data_id FROM mod_records WHERE type='mute' AND active='true';",
+            [](void* mute_list, int column_count, char** column_values, char** column_names) -> int {
+                auto mutes = static_cast<std::vector<util::mute>*>(mute_list);
+                util::mute mute;
+                mute.user = strtoull(column_values[0], nullptr, 10);
+                mute.id = strtoll(column_values[1], nullptr, 10);
+                mutes->push_back(mute);
+                return 0;
+            },
+        &mute_list, &error_message);
+        if (error_message != nullptr) {
+            util::log("SQL ERROR", error_message);
+            sqlite3_free(error_message);
+        }
+        for (util::mute& mute : mute_list) {
+            sqlite3_exec(db, std::format("SELECT start_time, end_time FROM mutes WHERE id={};", mute.id).c_str(),
+                [](void* output, int column_count, char** column_values, char** column_names) -> int {
+                    auto mute = static_cast<util::mute*>(output);
+                    mute->start_time = strtoll(column_values[0], nullptr, 10);
+                    mute->end_time = strtoll(column_values[1], nullptr, 10);
+                    return 0;
+                },
+            &mute, &error_message);
+            if (error_message != nullptr) {
+                util::log("SQL ERROR", error_message);
+                sqlite3_free(error_message);
+                mute.start_time = time(nullptr);
+                mute.end_time = mute.start_time;
+            }
+
+            std::string log_message;
+            if (mute.end_time < time(nullptr)) {
+                log_message += "Belated removal of";
+            } else {
+                log_message += "Resuming";
+            }
+            log_message += " mute of " + util::seconds_to_fancytime(mute.end_time - mute.start_time, 4);
+            if (const dpp::user* user = dpp::find_user(mute.user); user != nullptr) {
+                log_message += " from " + user->username;
+            }
+            util::log("INFO", log_message);
+            util::handle_mute(&bot, db, config, mute);
+        }
     });
 
     bot.start(dpp::st_wait);
