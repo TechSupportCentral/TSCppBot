@@ -180,6 +180,48 @@
       "global": false,
       "admin_only": false,
       "mod_only": true
+    },
+    {
+      "name": "warn",
+      "description": "Give a user a warning",
+      "options": [
+        {
+          "name": "user",
+          "description": "User to warn",
+          "type": 6,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "description": "Warning message",
+          "type": 3,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": true
+    },
+    {
+      "name": "unwarn",
+      "description": "Undo a warning",
+      "options": [
+        {
+          "name": "id",
+          "description": "ID of the original warning message",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "description": "Reason for undoing the warning",
+          "type": 3,
+          "required": true
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": true
     }
   ],
   "server_info": [

@@ -13,6 +13,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <sqlite3.h>
 #include <dpp/dpp.h>
 
 namespace moderation {
@@ -20,4 +21,6 @@ namespace moderation {
     dpp::task<> purge(const dpp::slashcommand_t &event, const nlohmann::json &config);
     void userinfo(const dpp::slashcommand_t &event, const nlohmann::json &config);
     dpp::task<> inviteinfo(const dpp::slashcommand_t &event);
+    dpp::task<> warn(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
+    dpp::task<> unwarn(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
 }

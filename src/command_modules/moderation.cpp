@@ -180,3 +180,143 @@ dpp::task<> moderation::inviteinfo(const dpp::slashcommand_t &event) {
     co_await thinking;
     event.edit_original_response(dpp::message(embed));
 }
+
+dpp::task<> moderation::warn(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db) {
+    // Send "thinking" response to allow time for DB operation
+    dpp::async thinking = event.co_thinking(true);
+    // Get context variables
+    dpp::guild_member user;
+    try {
+        user = event.command.get_resolved_member(std::get<dpp::snowflake>(event.get_parameter("user")));
+    } catch (const dpp::logic_exception&) {
+        user.user_id = 0;
+    }
+    if (user.user_id == 0) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::format("User <@{}> is not a member of the server",
+                                     std::get<dpp::snowflake>(event.get_parameter("user")).str())));
+        co_return;
+    }
+    std::string reason = std::get<std::string>(event.get_parameter("reason"));
+
+    // Create warning message and send DM to user
+    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::red).set_title("You have been warned.").add_field("Reason", reason, false);
+    dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.user_id, dpp::message(dm_embed));
+
+    // Send empty embed to log channel and get the message ID
+    dpp::confirmation_callback_t log_conf = co_await event.owner->co_message_create(dpp::message(config["log_channel_ids"]["mod_log"], dpp::embed()));
+    if (log_conf.is_error()) {
+        co_await thinking;
+        if (dm_conf.is_error()) {
+            event.edit_original_response(dpp::message("Failed to send warning message."));
+        } else {
+            event.edit_original_response(dpp::message("User warned successfully, but failed to create logs."));
+        }
+        co_return;
+    }
+    dpp::message log_message = std::get<dpp::message>(log_conf.value);
+    // Edit the message with warning info
+    log_message.embeds[0].set_color(dpp::colors::red).set_title("Warning").set_thumbnail(user.get_avatar_url())
+    .set_description(std::format("Use `/unwarn {} <reason>` to remove this warning. Note: This is not the user's ID, rather the ID of this message.", log_message.id.str()))
+    .add_field("User warned", user.get_nickname(), true)
+    .add_field("User ID", user.user_id.str(), true)
+    .add_field("Reason", reason, false);
+    if (dm_conf.is_error()) {
+        log_message.embeds[0].set_footer(dpp::embed_footer().set_text("Failed to DM user"));
+    }
+    event.owner->message_edit(log_message);
+
+    // Add warning to DB
+    char* error_message;
+    sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'warn', '{}', '{}', {}, 'true', NULL);",
+                                 log_message.id.str(),
+                                 event.command.get_issuing_user().id.str(),
+                                 user.user_id.str(),
+                                 util::sql_escape_string(reason, true)
+                     ).c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        co_await thinking;
+        event.edit_original_response(dpp::message("User warned successfully, but failed to add DB entry."));
+        co_return;
+    }
+    co_await thinking;
+    event.edit_original_response(dpp::message("User warned successfully."));
+}
+
+dpp::task<> moderation::unwarn(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db) {
+    // Send "thinking" response to allow time for DB operation
+    dpp::async thinking = event.co_thinking(true);
+    std::string reason = std::get<std::string>(event.get_parameter("reason"));
+    // Get ID and make sure it's a number
+    std::string id = std::get<std::string>(event.get_parameter("id"));
+    if (std::ranges::any_of(id, [](const char& c){return !std::isdigit(c);})) {
+        co_await thinking;
+        event.edit_original_response(dpp::message("Invalid warning message ID."));
+        co_return;
+    }
+    // Make sure warning exists in DB and get warn reason and associated user ID
+    dpp::snowflake user_id = 0;
+    std::string original_reason;
+    std::pair callback_data = {&user_id, &original_reason};
+    char* error_message;
+    sqlite3_exec(db, std::format("SELECT user, reason FROM mod_records WHERE id='{}';", id).c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto data = static_cast<std::pair<dpp::snowflake*, std::string*>*>(output);
+            *data->first = strtoull(column_values[0], nullptr, 10);
+            data->second->append(column_values[1]);
+            return 0;
+        },
+    &callback_data, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        co_await thinking;
+        event.edit_original_response(dpp::message("Failed to get warning from DB."));
+        co_return;
+    }
+    if (user_id == 0) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::string("Could not find warning with ID ") + id));
+        co_return;
+    }
+
+    // Set warning inactive in DB
+    sqlite3_exec(db, std::format("UPDATE mod_records SET active = 'false' WHERE id='{}';", id).c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        co_await thinking;
+        event.edit_original_response(dpp::message("Failed to set warning inactive in DB."));
+        co_return;
+    }
+    // Create unwarn message and send DM to user
+    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::green).set_title("Your warning has been removed.")
+                                      .add_field("Original warning reason", original_reason, false)
+                                      .add_field("Reason for removal", reason, false);
+    dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user_id, dpp::message(dm_embed));
+
+    // Find user
+    dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(user_id);
+    if (user_conf.is_error()) {
+        co_await thinking;
+        event.edit_original_response(dpp::message("Could not find warned user on Discord."));
+        co_return;
+    }
+    dpp::user user = std::get<dpp::user>(user_conf.value);
+    // Create and send log message
+    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_thumbnail(user.get_avatar_url())
+    .set_title("Warning Removed")
+    .add_field("User warned", user.username, true)
+    .add_field("User ID", user_id.str(), true)
+    .add_field("Original warn reason", original_reason, false)
+    .add_field("Reason for removal", reason, false);
+    if (dm_conf.is_error()) {
+        log_embed.set_footer(dpp::embed_footer().set_text("Failed to DM user"));
+    }
+    event.owner->message_create(dpp::message(config["log_channel_ids"]["mod_log"], log_embed));
+    // Send confirmation
+    co_await thinking;
+    event.edit_original_response(dpp::message("Warning removed successfully."));
+}
