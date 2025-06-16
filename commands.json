@@ -91,7 +91,8 @@
           "name": "time",
           "description": "Amount of time to be reminded in. For example: 1d2h3m4s (1 day, 2 hours, 3 minutes, and 4 seconds)",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 84
         },
         {
           "name": "reminder",
@@ -195,7 +196,8 @@
           "name": "reason",
           "description": "Warning message",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 1024
         }
       ],
       "global": false,
@@ -210,13 +212,15 @@
           "name": "id",
           "description": "ID of the original warning message",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 20
         },
         {
           "name": "reason",
           "description": "Reason for undoing the warning",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 1024
         }
       ],
       "global": false,
@@ -237,13 +241,15 @@
           "name": "time",
           "description": "Amount of time to mute for. For example: 1d2h3m4s (1 day, 2 hours, 3 minutes, and 4 seconds)",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 84
         },
         {
           "name": "reason",
           "description": "Reason for mute",
           "type": 3,
-          "required": false
+          "required": false,
+          "max_length": 1024
         }
       ],
       "global": false,
@@ -264,7 +270,8 @@
           "name": "reason",
           "description": "Reason for removing mute",
           "type": 3,
-          "required": false
+          "required": false,
+          "max_length": 1024
         }
       ],
       "global": false,
@@ -321,7 +328,8 @@
           "name": "suggestion_id",
           "description": "Message ID of the suggestion",
           "type": 3,
-          "required": true
+          "required": true,
+          "max_length": 20
         },
         {
           "name": "accept",
