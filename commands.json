@@ -277,6 +277,28 @@
       "global": false,
       "admin_only": false,
       "mod_only": true
+    },
+    {
+      "name": "kick",
+      "description": "Remove a user from the server",
+      "options": [
+        {
+          "name": "user",
+          "description": "User to kick",
+          "type": 6,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "description": "Reason for kicking",
+          "type": 3,
+          "required": true,
+          "max_length": 1024
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": true
     }
   ],
   "server_info": [

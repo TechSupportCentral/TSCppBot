@@ -235,6 +235,7 @@ int main(int argc, char* argv[]) {
         else if (command_name == "unwarn") co_await moderation::unwarn(event, config, db);
         else if (command_name == "mute") co_await moderation::mute(event, config, db);
         else if (command_name == "unmute") co_await moderation::unmute(event, config, db);
+        else if (command_name == "kick") co_await moderation::kick(event, config, db);
         else {
             auto text_command = db_text_commands.find(command_name);
             if (text_command != db_text_commands.end()) {

@@ -154,7 +154,7 @@ void moderation::userinfo(const dpp::slashcommand_t &event, const nlohmann::json
         }
         embed.add_field("Roles", roles.substr(2), false);
 
-        time_t user_created = user.get_creation_time();
+        auto user_created = static_cast<time_t>(user.get_creation_time());
         time_t time_since_created = time(nullptr) - user_created;
         std::string fancytime_since_created;
         if (time_since_created > 604800) {
@@ -173,7 +173,7 @@ void moderation::userinfo(const dpp::slashcommand_t &event, const nlohmann::json
         }
         embed.add_field("Joined server:", std::format("<t:{}> ({} ago)", member.joined_at, fancytime_since_joined), true);
     } catch (const dpp::logic_exception&) {
-        time_t user_created = user.get_creation_time();
+        auto user_created = static_cast<time_t>(user.get_creation_time());
         time_t time_since_created = time(nullptr) - user_created;
         std::string fancytime_since_created;
         if (time_since_created > 604800) {
@@ -574,4 +574,85 @@ dpp::task<> moderation::unmute(const dpp::slashcommand_t &event, const nlohmann:
     // Send confirmation
     co_await thinking;
     event.edit_original_response(dpp::message("Mute removed successfully."));
+}
+
+dpp::task<> moderation::kick(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db) {
+    // Send "thinking" response to allow time for DB operation
+    dpp::async thinking = event.co_thinking(true);
+    // Get context variables
+    dpp::user user = event.command.get_resolved_user(std::get<dpp::snowflake>(event.get_parameter("user")));
+    try {
+        dpp::guild_member test_member = event.command.get_resolved_member(user.id);
+    } catch (const dpp::logic_exception&) {
+        user.id = 0;
+    }
+    if (user.id == 0) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::format("User <@{}> is not a member of the server",
+                                     std::get<dpp::snowflake>(event.get_parameter("user")).str())));
+        co_return;
+    }
+    std::string reason = std::get<std::string>(event.get_parameter("reason"));
+    // Check hierarchy
+    if (! co_await check_perms(event.owner, config, event.command.get_issuing_user().id, user.id)) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(user.get_mention() + "'s rank is higher than or equal to yours, cannot kick."));
+        co_return;
+    }
+
+    // Create kick message and send DM to user
+    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::red).set_title("You have been kicked.").add_field("Reason", reason, false);
+    dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.id, dpp::message(dm_embed));
+    // Kick user
+    dpp::confirmation_callback_t kick_conf = co_await event.owner->co_guild_member_kick(config["guild_id"], user.id);
+    if (kick_conf.is_error()) {
+        co_await thinking;
+        if (dm_conf.is_error()) {
+            event.edit_original_response(dpp::message("Failed to kick user."));
+        } else {
+            event.edit_original_response(dpp::message("Failed to kick user, but kick message was sent."));
+        }
+        co_return;
+    }
+
+    // Send empty embed to log channel and get the message ID
+    dpp::confirmation_callback_t log_conf = co_await event.owner->co_message_create(dpp::message(config["log_channel_ids"]["mod_log"], dpp::embed().set_title(".")));
+    if (log_conf.is_error()) {
+        co_await thinking;
+        if (dm_conf.is_error()) {
+            event.edit_original_response(dpp::message("User kicked successfully, but failed to send kick message."));
+        } else {
+            event.edit_original_response(dpp::message("User kicked successfully, but failed to create logs."));
+        }
+        co_return;
+    }
+    dpp::message log_message = std::get<dpp::message>(log_conf.value);
+    // Edit the message with kick info
+    log_message.embeds[0].set_color(dpp::colors::red).set_title("Kick").set_thumbnail(user.get_avatar_url())
+    .add_field("User kicked", user.username, true)
+    .add_field("User ID", user.id.str(), true)
+    .add_field("Kicked by", event.command.get_issuing_user().global_name, false)
+    .add_field("Reason", reason, false);
+    if (dm_conf.is_error()) {
+        log_message.embeds[0].set_footer(dpp::embed_footer().set_text("Failed to DM user"));
+    }
+    event.owner->message_edit(log_message);
+
+    // Add warning to DB
+    char* error_message;
+    sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'kick', '{}', '{}', {}, 'true', NULL);",
+                                 log_message.id.str(),
+                                 event.command.get_issuing_user().id.str(),
+                                 user.id.str(),
+                                 util::sql_escape_string(reason, true)
+                     ).c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        co_await thinking;
+        event.edit_original_response(dpp::message("User kicked successfully, but failed to add DB entry."));
+        co_return;
+    }
+    co_await thinking;
+    event.edit_original_response(dpp::message("User kicked successfully."));
 }
