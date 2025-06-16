@@ -23,4 +23,6 @@ namespace moderation {
     dpp::task<> inviteinfo(const dpp::slashcommand_t &event);
     dpp::task<> warn(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
     dpp::task<> unwarn(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
+    dpp::task<> mute(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
+    dpp::task<> unmute(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
 }

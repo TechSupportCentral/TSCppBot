@@ -16,6 +16,49 @@
 #include "../util.h"
 #include <map>
 
+// TODO: Trial mods should be able to warn, mute, and kick, but not ban
+
+/**
+ * Make sure a moderator is allowed to run a command against another user
+ * @param bot Pointer to bot cluster to find guild members with
+ * @param config JSON bot configuration
+ * @param issuer ID of user who issued the moderation command
+ * @param subject ID of user the command is acting on
+ * @return true if the issuer is higher in the role hierarchy than the subject
+ */
+dpp::task<bool> check_perms(dpp::cluster* bot, const nlohmann::json& config, const dpp::snowflake issuer, const dpp::snowflake subject) {
+    const dpp::snowflake hierarchy[3] = {config["role_ids"]["owner"], config["role_ids"]["moderator"], config["role_ids"]["trial_mod"]};
+    const dpp::confirmation_callback_t issuer_conf = co_await bot->co_guild_get_member(config["guild_id"], issuer);
+    const dpp::confirmation_callback_t subject_conf = co_await bot->co_guild_get_member(config["guild_id"], subject);
+    // If the command issuer is not a server member, they do not have permission
+    if (issuer_conf.is_error()) {
+        co_return false;
+    }
+    // If the command subject is not a server member, they cannot be in the hierarchy so the issuer has permission
+    if (subject_conf.is_error()) {
+        co_return true;
+    }
+
+    // Get hierarchy index of role of highest rank for issuer and subject
+    int issuer_rank_index = 3;
+    int subject_rank_index = 3;
+    std::vector<dpp::snowflake> issuer_roles = std::get<dpp::guild_member>(issuer_conf.value).get_roles();
+    std::vector<dpp::snowflake> subject_roles = std::get<dpp::guild_member>(subject_conf.value).get_roles();
+    for (int i = 0; i < 3; i++) {
+        if (std::ranges::find(issuer_roles, hierarchy[i]) != issuer_roles.end()) {
+            issuer_rank_index = i;
+            break;
+        }
+    }
+    for (int i = 0; i < 3; i++) {
+        if (std::ranges::find(subject_roles, hierarchy[i]) != subject_roles.end()) {
+            subject_rank_index = i;
+            break;
+        }
+    }
+    co_return issuer_rank_index < subject_rank_index;
+}
+
 dpp::task<> moderation::create_ticket(const dpp::slashcommand_t &event, const nlohmann::json &config) {
     // Send "thinking" response to allow time for Discord API
     dpp::async thinking = event.co_thinking(true);
@@ -198,13 +241,19 @@ dpp::task<> moderation::warn(const dpp::slashcommand_t &event, const nlohmann::j
         co_return;
     }
     std::string reason = std::get<std::string>(event.get_parameter("reason"));
+    // Check hierarchy
+    if (! co_await check_perms(event.owner, config, event.command.get_issuing_user().id, user.user_id)) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(user.get_mention() + "'s rank is higher than or equal to yours, cannot warn."));
+        co_return;
+    }
 
     // Create warning message and send DM to user
     dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::red).set_title("You have been warned.").add_field("Reason", reason, false);
     dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.user_id, dpp::message(dm_embed));
 
     // Send empty embed to log channel and get the message ID
-    dpp::confirmation_callback_t log_conf = co_await event.owner->co_message_create(dpp::message(config["log_channel_ids"]["mod_log"], dpp::embed()));
+    dpp::confirmation_callback_t log_conf = co_await event.owner->co_message_create(dpp::message(config["log_channel_ids"]["mod_log"], dpp::embed().set_title(".")));
     if (log_conf.is_error()) {
         co_await thinking;
         if (dm_conf.is_error()) {
@@ -216,10 +265,11 @@ dpp::task<> moderation::warn(const dpp::slashcommand_t &event, const nlohmann::j
     }
     dpp::message log_message = std::get<dpp::message>(log_conf.value);
     // Edit the message with warning info
-    log_message.embeds[0].set_color(dpp::colors::red).set_title("Warning").set_thumbnail(user.get_avatar_url())
+    log_message.embeds[0].set_color(dpp::colors::red).set_title("Warning").set_thumbnail(user.get_user()->get_avatar_url())
     .set_description(std::format("Use `/unwarn {} <reason>` to remove this warning. Note: This is not the user's ID, rather the ID of this message.", log_message.id.str()))
     .add_field("User warned", user.get_nickname(), true)
     .add_field("User ID", user.user_id.str(), true)
+    .add_field("Warned by", event.command.get_issuing_user().global_name, false)
     .add_field("Reason", reason, false);
     if (dm_conf.is_error()) {
         log_message.embeds[0].set_footer(dpp::embed_footer().set_text("Failed to DM user"));
@@ -281,6 +331,12 @@ dpp::task<> moderation::unwarn(const dpp::slashcommand_t &event, const nlohmann:
         event.edit_original_response(dpp::message(std::string("Could not find warning with ID ") + id));
         co_return;
     }
+    // Check hierarchy
+    if (! co_await check_perms(event.owner, config, event.command.get_issuing_user().id, user_id)) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::format("Cannot remove warning on <@{}>, whose rank is higher than or equal to yours.", user_id.str())));
+        co_return;
+    }
 
     // Set warning inactive in DB
     sqlite3_exec(db, std::format("UPDATE mod_records SET active = 'false' WHERE id='{}';", id).c_str(), nullptr, nullptr, &error_message);
@@ -304,12 +360,13 @@ dpp::task<> moderation::unwarn(const dpp::slashcommand_t &event, const nlohmann:
         event.edit_original_response(dpp::message("Could not find warned user on Discord."));
         co_return;
     }
-    dpp::user user = std::get<dpp::user>(user_conf.value);
+    dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
     // Create and send log message
     dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_thumbnail(user.get_avatar_url())
     .set_title("Warning Removed")
     .add_field("User warned", user.username, true)
     .add_field("User ID", user_id.str(), true)
+    .add_field("Warning removed by", event.command.get_issuing_user().global_name, false)
     .add_field("Original warn reason", original_reason, false)
     .add_field("Reason for removal", reason, false);
     if (dm_conf.is_error()) {
@@ -319,4 +376,202 @@ dpp::task<> moderation::unwarn(const dpp::slashcommand_t &event, const nlohmann:
     // Send confirmation
     co_await thinking;
     event.edit_original_response(dpp::message("Warning removed successfully."));
+}
+
+dpp::task<> moderation::mute(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db) {
+    // Send "thinking" response to allow time for DB operation
+    dpp::async thinking = event.co_thinking(true);
+    // Get context variables
+    dpp::guild_member user;
+    try {
+        user = event.command.get_resolved_member(std::get<dpp::snowflake>(event.get_parameter("user")));
+    } catch (const dpp::logic_exception&) {
+        user.user_id = 0;
+    }
+    if (user.user_id == 0) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::format("User <@{}> is not a member of the server",
+                                     std::get<dpp::snowflake>(event.get_parameter("user")).str())));
+        co_return;
+    }
+    std::string seconds_str = std::get<std::string>(event.get_parameter("time"));
+    time_t seconds = util::time_string_to_seconds(seconds_str);
+    if (seconds == -1) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::format(
+        "Time string `{}` is not in the correct format.\n", seconds_str)
+        + "It should look something like `1d2h3m4s` (1 day, 2 hours, 3 minutes, and 4 seconds)."));
+        co_return;
+    }
+    std::string fancytime = util::seconds_to_fancytime(seconds, 2);
+    std::string reason;
+    try {
+        reason = std::get<std::string>(event.get_parameter("reason"));
+    } catch (const std::bad_variant_access&) {
+        reason = "No reason provided.";
+    }
+    // Check hierarchy
+    if (! co_await check_perms(event.owner, config, event.command.get_issuing_user().id, user.user_id)) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(user.get_mention() + "'s rank is higher than or equal to yours, cannot mute."));
+        co_return;
+    }
+
+    // Add muted role to user and get time of this action
+    time_t now = time(nullptr);
+    dpp::confirmation_callback_t role_add_conf = co_await event.owner->co_guild_member_add_role(config["guild_id"], user.user_id, config["role_ids"]["muted"]);
+    if (role_add_conf.is_error()) {
+        co_await thinking;
+        event.edit_original_response(dpp::message("Failed to add muted role to user."));
+        co_return;
+    }
+    util::mute mute = {0, user.user_id, now, now + seconds};
+
+    // Create mute message and send DM to user
+    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::red)
+                                      .set_title(std::format("You have been muted for {}.", fancytime))
+                                      .add_field("Reason", reason, false);
+    dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(mute.user, dpp::message(dm_embed));
+
+    // Send empty embed to log channel and get the message ID
+    dpp::confirmation_callback_t log_conf = co_await event.owner->co_message_create(dpp::message(config["log_channel_ids"]["mod_log"], dpp::embed().set_title(".")));
+    if (log_conf.is_error()) {
+        co_await thinking;
+        if (dm_conf.is_error()) {
+            event.edit_original_response(dpp::message("User muted successfully, but failed to notify them."));
+        } else {
+            event.edit_original_response(dpp::message("User muted successfully, but failed to create logs."));
+        }
+        util::handle_mute(event.owner, db, config, mute);
+        co_return;
+    }
+    dpp::message log_message = std::get<dpp::message>(log_conf.value);
+    // Edit the message with mute info
+    log_message.embeds[0].set_color(dpp::colors::red).set_thumbnail(user.get_user()->get_avatar_url())
+    .set_title(std::string("Mute for ") + fancytime)
+    .add_field("User muted", user.get_nickname(), true)
+    .add_field("User ID", mute.user.str(), true)
+    .add_field("Muted by", event.command.get_issuing_user().global_name, false)
+    .add_field("Reason", reason, false);
+    if (dm_conf.is_error()) {
+        log_message.embeds[0].set_footer(dpp::embed_footer().set_text("Failed to DM user"));
+    }
+    event.owner->message_edit(log_message);
+
+    // Add mute to DB
+    char* error_message;
+    sqlite3_exec(db, std::format("INSERT INTO mutes VALUES (NULL, {}, {});",
+                                mute.start_time, mute.end_time).c_str(),
+                 nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        co_await thinking;
+        event.edit_original_response(dpp::message("User muted successfully, but failed to add DB entry."));
+    } else {
+        mute.id = sqlite3_last_insert_rowid(db);
+        sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'mute', '{}', '{}', {}, 'true', {});",
+                                     log_message.id.str(),
+                                     event.command.get_issuing_user().id.str(),
+                                     mute.user.str(),
+                                     util::sql_escape_string(reason, true),
+                                     mute.id
+                         ).c_str(), nullptr, nullptr, &error_message);
+        if (error_message != nullptr) {
+            util::log("SQL ERROR", error_message);
+            sqlite3_free(error_message);
+            co_await thinking;
+            event.edit_original_response(dpp::message("User muted successfully, but failed to add DB entry."));
+        } else {
+            co_await thinking;
+            event.edit_original_response(dpp::message("User muted successfully."));
+        }
+    }
+    util::handle_mute(event.owner, db, config, mute);
+}
+
+dpp::task<> moderation::unmute(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db) {
+    // Send "thinking" response to allow time for DB operation
+    dpp::async thinking = event.co_thinking(true);
+    // Get context variables
+    dpp::guild_member user;
+    try {
+        user = event.command.get_resolved_member(std::get<dpp::snowflake>(event.get_parameter("user")));
+    } catch (const dpp::logic_exception&) {
+        user.user_id = 0;
+    }
+    if (user.user_id == 0) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::format("User <@{}> is not a member of the server",
+                                     std::get<dpp::snowflake>(event.get_parameter("user")).str())));
+        co_return;
+    }
+    std::string reason;
+    try {
+        reason = std::get<std::string>(event.get_parameter("reason"));
+    } catch (const std::bad_variant_access&) {
+        reason = "No reason provided.";
+    }
+    // Make sure user is muted
+    std::vector<dpp::snowflake> roles = user.get_roles();
+    if (std::ranges::find(roles, config["role_ids"]["muted"].get<dpp::snowflake>()) == roles.end()) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::format("User {} is not muted.", user.get_mention())));
+        co_return;
+    }
+    // Check hierarchy
+    if (! co_await check_perms(event.owner, config, event.command.get_issuing_user().id, user.user_id)) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::format("Cannot unmute <@{}>, whose rank is higher than or equal to yours.", user.user_id.str())));
+        co_return;
+    }
+
+    // Remove mute role
+    dpp::confirmation_callback_t unmute_conf = co_await event.owner->co_guild_member_delete_role(config["guild_id"], user.user_id, config["role_ids"]["muted"]);
+    if (unmute_conf.is_error()) {
+        co_await thinking;
+        event.edit_original_response(dpp::message(std::string("Failed to remove muted role from ") + user.get_mention()));
+        co_return;
+    }
+    // Get mute ID if it exists in DB
+    dpp::snowflake id = 0;
+    char* error_message;
+    sqlite3_exec(db, std::format("SELECT id FROM mod_records WHERE user='{}' AND active='true';", user.user_id.str()).c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto id = static_cast<dpp::snowflake*>(output);
+            *id = strtoull(column_values[0], nullptr, 10);
+            return 0;
+        },
+    &id, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+    }
+    if (id != 0) {
+        // Set mute inactive in DB
+        sqlite3_exec(db, std::format("UPDATE mod_records SET active = 'false' WHERE id='{}';", id.str()).c_str(), nullptr, nullptr, &error_message);
+        if (error_message != nullptr) {
+            util::log("SQL ERROR", error_message);
+            sqlite3_free(error_message);
+        }
+    }
+
+    // Create unwarn message and send DM to user
+    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::green).set_title("You have been unmuted.")
+                                      .add_field("Reason", reason, false);
+    dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.user_id, dpp::message(dm_embed));
+    // Create and send log message
+    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_thumbnail(user.get_user()->get_avatar_url())
+    .set_title("Mute Removed")
+    .add_field("User unmuted", user.get_nickname(), true)
+    .add_field("User ID", user.user_id.str(), true)
+    .add_field("Mute removed by", event.command.get_issuing_user().global_name, false)
+    .add_field("Reason", reason, false);
+    if (dm_conf.is_error()) {
+        log_embed.set_footer(dpp::embed_footer().set_text("Failed to DM user"));
+    }
+    event.owner->message_create(dpp::message(config["log_channel_ids"]["mod_log"], log_embed));
+    // Send confirmation
+    co_await thinking;
+    event.edit_original_response(dpp::message("Mute removed successfully."));
 }

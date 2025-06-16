@@ -222,11 +222,13 @@ dpp::job util::handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json&
         co_await bot->co_sleep(mute.end_time - now);
     }
     // Mark mute as inactive in DB
-    char* error_message;
-    sqlite3_exec(db, std::format("UPDATE mod_records SET active = 'false' WHERE extra_data_id={};", mute.id).c_str(), nullptr, nullptr, &error_message);
-    if (error_message != nullptr) {
-        log("SQL ERROR", error_message);
-        sqlite3_free(error_message);
+    if (mute.id != 0) {
+        char* error_message;
+        sqlite3_exec(db, std::format("UPDATE mod_records SET active = 'false' WHERE extra_data_id={};", mute.id).c_str(), nullptr, nullptr, &error_message);
+        if (error_message != nullptr) {
+            log("SQL ERROR", error_message);
+            sqlite3_free(error_message);
+        }
     }
     // No messages sent if user has left server or is no longer muted
     dpp::confirmation_callback_t member_conf = co_await bot->co_guild_get_member(config["guild_id"], mute.user);
@@ -240,7 +242,7 @@ dpp::job util::handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json&
     }
     // Send user notification and log the unmute action
     dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::green).set_title("You have been automatically unmuted.");
-    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_title("Mute removed")
+    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_title("Mute removed").set_thumbnail(user.get_user()->get_avatar_url())
                                        .add_field("User unmuted", user.get_nickname(), true)
                                        .add_field("User ID", mute.user.str(), true)
                                        .add_field("Reason", "Automatic unmute", false);
@@ -248,5 +250,5 @@ dpp::job util::handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json&
     if (dm_conf.is_error()) {
         log_embed.set_footer(dpp::embed_footer().set_text("Failed to DM user"));
     }
-    bot->message_create(dpp::message(config["log_channel_ids"]["mod_log"], dm_embed));
+    bot->message_create(dpp::message(config["log_channel_ids"]["mod_log"], log_embed));
 }

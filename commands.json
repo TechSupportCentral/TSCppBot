@@ -222,6 +222,54 @@
       "global": false,
       "admin_only": false,
       "mod_only": true
+    },
+    {
+      "name": "mute",
+      "description": "Prevent a user from sending messages",
+      "options": [
+        {
+          "name": "user",
+          "description": "User to mute",
+          "type": 6,
+          "required": true
+        },
+        {
+          "name": "time",
+          "description": "Amount of time to mute for. For example: 1d2h3m4s (1 day, 2 hours, 3 minutes, and 4 seconds)",
+          "type": 3,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "description": "Reason for mute",
+          "type": 3,
+          "required": false
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": true
+    },
+    {
+      "name": "unmute",
+      "description": "Remove a mute on a user",
+      "options": [
+        {
+          "name": "user",
+          "description": "User to unmute",
+          "type": 6,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "description": "Reason for removing mute",
+          "type": 3,
+          "required": false
+        }
+      ],
+      "global": false,
+      "admin_only": false,
+      "mod_only": true
     }
   ],
   "server_info": [

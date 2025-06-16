@@ -231,6 +231,10 @@ int main(int argc, char* argv[]) {
         else if (command_name == "purge") co_await moderation::purge(event, config);
         else if (command_name == "userinfo") moderation::userinfo(event, config);
         else if (command_name == "inviteinfo") co_await moderation::inviteinfo(event);
+        else if (command_name == "warn") co_await moderation::warn(event, config, db);
+        else if (command_name == "unwarn") co_await moderation::unwarn(event, config, db);
+        else if (command_name == "mute") co_await moderation::mute(event, config, db);
+        else if (command_name == "unmute") co_await moderation::unmute(event, config, db);
         else {
             auto text_command = db_text_commands.find(command_name);
             if (text_command != db_text_commands.end()) {
