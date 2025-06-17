@@ -4,20 +4,19 @@
       "name": "ping",
       "description": "Test the bot latency",
       "options": [],
-      "global": true
+      "permission_level": "global"
     },
     {
       "name": "uptime",
       "description": "See how long the bot has been online",
       "options": [],
-      "global": true
+      "permission_level": "global"
     },
     {
       "name": "commit",
       "description": "See what git commit the bot is currently running on",
       "options": [],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "sendmessage",
@@ -31,8 +30,7 @@
           "max_length": 2000
         }
       ],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "announce",
@@ -59,8 +57,7 @@
           "required": false
         }
       ],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "dm",
@@ -80,8 +77,7 @@
           "max_length": 1024
         }
       ],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "remindme",
@@ -102,7 +98,7 @@
           "max_length": 4096
         }
       ],
-      "global": true
+      "permission_level": "global"
     }
   ],
   "moderation": [
@@ -117,10 +113,7 @@
           "required": true,
           "max_length": 100
         }
-      ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": false
+      ]
     },
     {
       "name": "purge",
@@ -148,9 +141,7 @@
           "max_length": 1024
         }
       ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": true
+      "permission_level": "moderator"
     },
     {
       "name": "userinfo",
@@ -163,9 +154,7 @@
           "required": false
         }
       ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": true
+      "permission_level": "support_team"
     },
     {
       "name": "inviteinfo",
@@ -178,9 +167,7 @@
           "required": true
         }
       ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": true
+      "permission_level": "support_team"
     },
     {
       "name": "warn",
@@ -200,9 +187,7 @@
           "max_length": 1024
         }
       ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": true
+      "permission_level": "trial_mod"
     },
     {
       "name": "unwarn",
@@ -223,9 +208,7 @@
           "max_length": 1024
         }
       ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": true
+      "permission_level": "trial_mod"
     },
     {
       "name": "mute",
@@ -252,9 +235,7 @@
           "max_length": 1024
         }
       ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": true
+      "permission_level": "trial_mod"
     },
     {
       "name": "unmute",
@@ -274,9 +255,7 @@
           "max_length": 1024
         }
       ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": true
+      "permission_level": "trial_mod"
     },
     {
       "name": "kick",
@@ -292,23 +271,66 @@
           "name": "reason",
           "description": "Reason for kicking",
           "type": 3,
-          "required": true,
+          "required": false,
           "max_length": 1024
         }
       ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": true
+      "permission_level": "moderator"
+    },
+    {
+      "name": "ban",
+      "description": "Ban a user from the server",
+      "options": [
+        {
+          "name": "user",
+          "description": "User to ban",
+          "type": 6,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "description": "Reason for banning",
+          "type": 3,
+          "required": false,
+          "max_length": 1024
+        },
+        {
+          "name": "delete_message_hours",
+          "description": "Delete all of the user's messages posted up to this amount of hours ago. Max 168 hours (7 days)",
+          "type": 4,
+          "required": false,
+          "min_value": 0,
+          "max_value": 168
+        }
+      ],
+      "permission_level": "moderator"
+    },
+    {
+      "name": "unban",
+      "description": "Remove a user's ban from the server",
+      "options": [
+        {
+          "name": "user",
+          "description": "User to unban",
+          "type": 6,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "description": "Reason for removing ban",
+          "type": 3,
+          "required": false,
+          "max_length": 1024
+        }
+      ],
+      "permission_level": "moderator"
     }
   ],
   "server_info": [
     {
       "name": "rules",
       "description": "Get a list of server rules",
-      "options": [],
-      "global": false,
-      "admin_only": false,
-      "mod_only": false
+      "options": []
     },
     {
       "name": "rule",
@@ -321,10 +343,7 @@
           "required": true,
           "min_value": 1
         }
-      ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": false
+      ]
     },
     {
       "name": "suggest",
@@ -337,10 +356,7 @@
           "required": true,
           "max_length": 4080
         }
-      ],
-      "global": false,
-      "admin_only": false,
-      "mod_only": false
+      ]
     },
     {
       "name": "suggestion-respond",
@@ -367,8 +383,7 @@
           "max_length": 1024
         }
       ],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     }
   ],
   "db_commands": [
@@ -376,8 +391,7 @@
       "name": "add-text-command",
       "description": "Add a custom text-based database command",
       "options": [],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "add-embed-command",
@@ -488,8 +502,7 @@
           "required": false
         }
       ],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "add-embed-command-field",
@@ -503,8 +516,7 @@
           "max_length": 32
         }
       ],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "remove-embed-command-field",
@@ -518,8 +530,7 @@
           "max_length": 32
         }
       ],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "edit-embed-command-field",
@@ -533,8 +544,7 @@
           "max_length": 32
         }
       ],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "remove-db-command",
@@ -548,15 +558,13 @@
           "length": 32
         }
       ],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     },
     {
       "name": "db-command-list",
       "description": "Get a list of commands in database",
       "options": [],
-      "global": false,
-      "admin_only": true
+      "permission_level": "admin"
     }
   ]
 }

@@ -236,6 +236,8 @@ int main(int argc, char* argv[]) {
         else if (command_name == "mute") co_await moderation::mute(event, config, db);
         else if (command_name == "unmute") co_await moderation::unmute(event, config, db);
         else if (command_name == "kick") co_await moderation::kick(event, config, db);
+        else if (command_name == "ban") co_await moderation::ban(event, config, db);
+        else if (command_name == "unban") co_await moderation::unban(event, config, db);
         else {
             auto text_command = db_text_commands.find(command_name);
             if (text_command != db_text_commands.end()) {
@@ -294,16 +296,37 @@ int main(int argc, char* argv[]) {
                         slash_command.add_option(command_option);
                     }
 
-                    if (command["global"]) {
-                        slash_command.set_dm_permission(true);
-                        global_commands.push_back(slash_command);
-                    } else {
-                        if (command["admin_only"]) {
+                    switch (command["permission_level"].get<util::command_perms>()) {
+                        case util::ADMIN_ONLY:
+                            // Only admins can use the command
                             slash_command.set_default_permissions(dpp::permissions::p_administrator);
-                        } else if (command["mod_only"]) {
+                            tsc_commands.push_back(slash_command);
+                            break;
+                        case util::MOD_ONLY:
+                            // Only users with manage threads (moderators) can use the command
+                            slash_command.set_default_permissions(dpp::permissions::p_manage_threads);
+                            tsc_commands.push_back(slash_command);
+                            break;
+                        case util::TRIAL_MOD_ONLY:
+                            // Only users with manage messages (trial mods and mods) can use the command
                             slash_command.set_default_permissions(dpp::permissions::p_manage_messages);
-                        }
-                        tsc_commands.push_back(slash_command);
+                            tsc_commands.push_back(slash_command);
+                            break;
+                        case util::STAFF_ONLY:
+                            // Only users who can change their own nickname (staff) can use the command
+                            slash_command.set_default_permissions(dpp::permissions::p_change_nickname);
+                            tsc_commands.push_back(slash_command);
+                            break;
+                        case util::GLOBAL:
+                            // This command can be run by anyone, and it can be run anywhere including DMs
+                            slash_command.set_dm_permission(true);
+                            global_commands.push_back(slash_command);
+                            break;
+                        case util::SERVER_ONLY:
+                        default:
+                            // Default: This command can be run by anyone, but only within the server
+                            tsc_commands.push_back(slash_command);
+                            break;
                     }
                 }
             }

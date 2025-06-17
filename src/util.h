@@ -13,7 +13,6 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <string>
 #include <dpp/dpp.h>
 #include <sqlite3.h>
 
@@ -32,6 +31,27 @@ namespace util {
         COMMAND_NOT_FOUND,
         SEARCH_ERROR
     };
+
+    /**
+     * Possible permission levels for a command
+     */
+    enum command_perms {
+        ADMIN_ONLY, /**< Restrict to admins */
+        MOD_ONLY, /**< Restrict to moderators */
+        TRIAL_MOD_ONLY, /**< Restrict to trial mods and moderators */
+        STAFF_ONLY, /**< Restrict to staff (support team and mod team) */
+        SERVER_ONLY, /**< Command can be run by anyone, but only in the server */
+        GLOBAL /**< Command can be run anyone anywhere, including DMs */
+    };
+    // Define JSON serialization for each value
+    NLOHMANN_JSON_SERIALIZE_ENUM(command_perms, {
+        {ADMIN_ONLY, "admin"},
+        {MOD_ONLY, "moderator"},
+        {TRIAL_MOD_ONLY, "trial_mod"},
+        {STAFF_ONLY, "support_team"},
+        {SERVER_ONLY, nullptr},
+        {GLOBAL, "global"},
+    })
 
     /**
      * Details for a user reminder
@@ -99,6 +119,16 @@ namespace util {
      * @return Pair of a command_search_result enum and a snowflake with the command's ID if found, 0 otherwise.
      */
     dpp::task<std::pair<command_search_result, dpp::snowflake>> find_command(dpp::cluster* bot, const nlohmann::json &config, std::string command_name);
+
+    /**
+     * Make sure a user is allowed to run a command against another user
+     * @param bot Pointer to bot cluster to find guild members with
+     * @param config JSON bot configuration
+     * @param issuer ID of user who issued the command
+     * @param subject ID of user the command is acting on
+     * @return true if the issuer is higher in the role hierarchy than the subject
+     */
+    dpp::task<bool> check_perms(dpp::cluster* bot, const nlohmann::json& config, dpp::snowflake issuer, dpp::snowflake subject);
 
     /**
      * Wait for the duration of a reminder, then send the user a notification DM

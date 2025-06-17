@@ -180,6 +180,39 @@ dpp::task<std::pair<util::command_search_result, dpp::snowflake>> util::find_com
     co_return {result, command_id};
 }
 
+dpp::task<bool> util::check_perms(dpp::cluster* bot, const nlohmann::json& config, const dpp::snowflake issuer, const dpp::snowflake subject) {
+    const dpp::snowflake hierarchy[4] = {config["role_ids"]["owner"], config["role_ids"]["moderator"], config["role_ids"]["trial_mod"], config["role_ids"]["support_team"]};
+    const dpp::confirmation_callback_t issuer_conf = co_await bot->co_guild_get_member(config["guild_id"], issuer);
+    const dpp::confirmation_callback_t subject_conf = co_await bot->co_guild_get_member(config["guild_id"], subject);
+    // If the command issuer is not a server member, they do not have permission
+    if (issuer_conf.is_error()) {
+        co_return false;
+    }
+    // If the command subject is not a server member, they cannot be in the hierarchy so the issuer has permission
+    if (subject_conf.is_error()) {
+        co_return true;
+    }
+
+    // Get hierarchy index of role of highest rank for issuer and subject
+    int issuer_rank_index = 4;
+    int subject_rank_index = 4;
+    std::vector<dpp::snowflake> issuer_roles = std::get<dpp::guild_member>(issuer_conf.value).get_roles();
+    std::vector<dpp::snowflake> subject_roles = std::get<dpp::guild_member>(subject_conf.value).get_roles();
+    for (int i = 0; i < 4; i++) {
+        if (std::ranges::find(issuer_roles, hierarchy[i]) != issuer_roles.end()) {
+            issuer_rank_index = i;
+            break;
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        if (std::ranges::find(subject_roles, hierarchy[i]) != subject_roles.end()) {
+            subject_rank_index = i;
+            break;
+        }
+    }
+    co_return issuer_rank_index < subject_rank_index;
+}
+
 dpp::job util::remind(dpp::cluster* bot, sqlite3* db, const reminder reminder) {
     const time_t now = time(nullptr);
     if (reminder.end_time < now) {

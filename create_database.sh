@@ -56,6 +56,7 @@ CREATE TABLE mod_records(
     user TEXT,
     reason TEXT,
     active TEXT,
-    extra_data_id INTEGER
+    extra_data INTEGER
 ) WITHOUT ROWID;
 "
+# mod_records extra_data is currently either the number of seconds to delete messages for in a ban, or a mutes table row ID.
