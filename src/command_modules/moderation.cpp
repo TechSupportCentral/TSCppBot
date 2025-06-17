@@ -235,7 +235,7 @@ dpp::task<> moderation::warn(const dpp::slashcommand_t &event, const nlohmann::j
 
     // Add warning to DB
     char* error_message;
-    sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'warn', '{}', '{}', {}, 'true', NULL);",
+    sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'Warning', '{}', '{}', {}, 'true', NULL);",
                                  log_message.id.str(),
                                  event.command.get_issuing_user().id.str(),
                                  user.user_id.str(),
@@ -376,7 +376,7 @@ dpp::task<> moderation::mute(const dpp::slashcommand_t &event, const nlohmann::j
 
     // Add muted role to user and get time of this action
     time_t now = time(nullptr);
-    dpp::confirmation_callback_t role_add_conf = co_await event.owner->co_guild_member_add_role(config["guild_id"], user.user_id, config["role_ids"]["muted"]);
+    dpp::confirmation_callback_t role_add_conf = co_await event.owner->co_guild_member_add_role(user.guild_id, user.user_id, config["role_ids"]["muted"]);
     if (role_add_conf.is_error()) {
         co_await thinking;
         event.edit_original_response(dpp::message("Failed to add muted role to user."));
@@ -427,7 +427,7 @@ dpp::task<> moderation::mute(const dpp::slashcommand_t &event, const nlohmann::j
         event.edit_original_response(dpp::message("User muted successfully, but failed to add DB entry."));
     } else {
         mute.id = sqlite3_last_insert_rowid(db);
-        sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'mute', '{}', '{}', {}, 'true', {});",
+        sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'Mute', '{}', '{}', {}, 'true', {});",
                                      log_message.id.str(),
                                      event.command.get_issuing_user().id.str(),
                                      mute.user.str(),
@@ -484,7 +484,7 @@ dpp::task<> moderation::unmute(const dpp::slashcommand_t &event, const nlohmann:
     }
 
     // Remove mute role
-    dpp::confirmation_callback_t unmute_conf = co_await event.owner->co_guild_member_delete_role(config["guild_id"], user.user_id, config["role_ids"]["muted"]);
+    dpp::confirmation_callback_t unmute_conf = co_await event.owner->co_guild_member_delete_role(user.guild_id, user.user_id, config["role_ids"]["muted"]);
     if (unmute_conf.is_error()) {
         co_await thinking;
         event.edit_original_response(dpp::message(std::string("Failed to remove muted role from ") + user.get_mention()));
@@ -493,7 +493,7 @@ dpp::task<> moderation::unmute(const dpp::slashcommand_t &event, const nlohmann:
     // Get mute ID if it exists in DB
     dpp::snowflake id = 0;
     char* error_message;
-    sqlite3_exec(db, std::format("SELECT id FROM mod_records WHERE user='{}' AND type='mute' AND active='true';", user.user_id.str()).c_str(),
+    sqlite3_exec(db, std::format("SELECT id FROM mod_records WHERE user='{}' AND type='Mute' AND active='true';", user.user_id.str()).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
             auto id = static_cast<dpp::snowflake*>(output);
             *id = strtoull(column_values[0], nullptr, 10);
@@ -602,7 +602,7 @@ dpp::task<> moderation::kick(const dpp::slashcommand_t &event, const nlohmann::j
 
     // Add kick to DB
     char* error_message;
-    sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'kick', '{}', '{}', {}, 'true', NULL);",
+    sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'Kick', '{}', '{}', {}, 'true', NULL);",
                                  log_message.id.str(),
                                  event.command.get_issuing_user().id.str(),
                                  user.id.str(),
@@ -694,7 +694,7 @@ dpp::task<> moderation::ban(const dpp::slashcommand_t &event, const nlohmann::js
 
     // Add ban to DB
     char* error_message;
-    sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'ban', '{}', '{}', {}, 'true', {});",
+    sqlite3_exec(db, std::format("INSERT INTO mod_records VALUES ('{}', 'Ban', '{}', '{}', {}, 'true', {});",
                                  log_message.id.str(),
                                  event.command.get_issuing_user().id.str(),
                                  user.id.str(),
@@ -747,7 +747,7 @@ dpp::task<> moderation::unban(const dpp::slashcommand_t &event, const nlohmann::
     // Get ban ID if it exists in DB
     dpp::snowflake id = 0;
     char* error_message;
-    sqlite3_exec(db, std::format("SELECT id FROM mod_records WHERE user='{}' AND type='ban' AND active='true';", user.id.str()).c_str(),
+    sqlite3_exec(db, std::format("SELECT id FROM mod_records WHERE user='{}' AND type='Ban' AND active='true';", user.id.str()).c_str(),
         [](void* output, int column_count, char** column_values, char** column_names) -> int {
             auto id = static_cast<dpp::snowflake*>(output);
             *id = strtoull(column_values[0], nullptr, 10);
@@ -785,4 +785,94 @@ dpp::task<> moderation::unban(const dpp::slashcommand_t &event, const nlohmann::
     // Send confirmation
     co_await thinking;
     event.edit_original_response(dpp::message("Ban removed successfully."));
+}
+
+void moderation::get_mod_actions(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db) {
+    // Send "thinking" response to allow time for DB operation
+    event.thinking();
+    dpp::user user = event.command.get_resolved_user(std::get<dpp::snowflake>(event.get_parameter("user")));
+    // Get all actions against user
+    struct action {
+        dpp::snowflake id;
+        std::string type = "Unknown";
+        dpp::snowflake mod;
+        std::string reason = "No reason provided.";
+        bool active = false;
+        time_t mute_seconds = 0; // stays 0 if type != "Mute"
+    };
+    std::vector<action> actions;
+    char* error_message;
+    sqlite3_exec(db, std::format("SELECT id, type, moderator, reason, active, extra_data FROM mod_records WHERE user='{}';", user.id.str()).c_str(),
+        [](void* action_list, int column_count, char** column_values, char** column_names) -> int {
+            auto actions = static_cast<std::vector<action>*>(action_list);
+            action action;
+            action.id = strtoull(column_values[0], nullptr, 10);
+            if (column_values[1] != nullptr) {
+                action.type = column_values[1];
+            }
+            action.mod = strtoull(column_values[2], nullptr, 10);
+            if (column_values[3] != nullptr) {
+                action.reason = column_values[3];
+            }
+            if (column_values[4] != nullptr) {
+                action.active = strcmp("false", column_values[4]);
+            }
+            if (column_values[5] != nullptr && action.type == "Mute") {
+                // Temporarily store mute ext info ID in mute_seconds
+                action.mute_seconds = strtoll(column_values[5], nullptr, 10);
+            }
+            actions->push_back(action);
+            return 0;
+        },
+    &actions, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message("Failed to get warnings from DB."));
+        return;
+    }
+    // Get mute time for mute actions
+    for (action& mod_action : actions) {
+        if (mod_action.type == "Mute") {
+            sqlite3_exec(db, std::format("SELECT start_time, end_time FROM mutes WHERE id={};", mod_action.mute_seconds).c_str(),
+                [](void* output, int column_count, char** column_values, char** column_names) -> int {
+                    auto mod_action = static_cast<action*>(output);
+                    time_t start_time = strtoll(column_values[0], nullptr, 10);
+                    time_t end_time = strtoll(column_values[1], nullptr, 10);
+                    mod_action->mute_seconds = end_time - start_time;
+                    return 0;
+                },
+            &mod_action, &error_message);
+            if (error_message != nullptr) {
+                util::log("SQL ERROR", error_message);
+                sqlite3_free(error_message);
+                mod_action.mute_seconds = 0;
+            }
+        }
+    }
+
+    // Print actions in groups of 4 because embeds can only have up to 25 fields
+    std::vector<dpp::embed> embeds((actions.size() + 3) / 4);
+    // Initialize embeds
+    embeds[0] = dpp::embed().set_color(0x00A0A0).set_thumbnail(user.get_avatar_url())
+                            .set_title(std::string("Moderation actions against ") + user.username);
+    for (size_t i = 1; i < embeds.size(); i++) {
+        embeds[i] = dpp::embed().set_color(0x00A0A0).set_title(user.username + "'s warnings continued");
+    }
+    // Add fields for each action attribute
+    for (size_t i = 0; i < actions.size(); i++) {
+        embeds[i / 4].add_field("ID", actions[i].id.str(), false)
+                     .add_field("Type", actions[i].type, true)
+                     .add_field("Reason", actions[i].reason, true)
+                     .add_field("Moderator User ID", actions[i].mod.str(), true)
+                     .add_field("Active", actions[i].active ? "true" : "false", true);
+        if (actions[i].type == "Mute") {
+            embeds[i / 4].add_field("Muted for", util::seconds_to_fancytime(actions[i].mute_seconds, 4), true);
+        }
+    }
+    // Send each embed
+    event.edit_original_response(dpp::message(event.command.channel_id, embeds[0]));
+    for (size_t i = 1; i < embeds.size(); i++) {
+        event.owner->message_create(dpp::message(event.command.channel_id, embeds[i]));
+    }
 }

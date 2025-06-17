@@ -324,6 +324,19 @@
         }
       ],
       "permission_level": "moderator"
+    },
+    {
+      "name": "warnings",
+      "description": "Get a list of moderation actions taken against a given user",
+      "options": [
+        {
+          "name": "user",
+          "description": "User to get warnings on",
+          "type": 6,
+          "required": true
+        }
+      ],
+      "permission_level": "trial_mod"
     }
   ],
   "server_info": [
