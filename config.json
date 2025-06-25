@@ -12,17 +12,19 @@
     "everyone": 854429523973636147
   },
   "public_channel_ids": {
-    "general_support": 854429524657176597,
-    "software_support": 854429524657176599,
-    "hardware_support": 854429524657176600,
-    "mobile_support": 854429524657176598,
-    "vc_chat": 854429524657176601,
     "general": 854429524798996485,
     "games": 854429524798996486,
     "setups": 854429524798996487,
     "memes": 854429524798996488,
     "bot_commands": 854429524976861224,
     "suggestions": 854429524798996482
+  },
+  "support_channel_ids": {
+    "general_support": 854429524657176597,
+    "software_support": 854429524657176599,
+    "hardware_support": 854429524657176600,
+    "mobile_support": 854429524657176598,
+    "vc_chat": 854429524657176601
   },
   "log_channel_ids": {
     "suggestion_list": 854429524798996483,

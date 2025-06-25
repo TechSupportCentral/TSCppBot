@@ -285,3 +285,11 @@ dpp::job util::handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json&
     }
     bot->message_create(dpp::message(config["log_channel_ids"]["mod_log"], log_embed));
 }
+
+dpp::job util::handle_bump(dpp::cluster* bot, const nlohmann::json& config, const dpp::snowflake channel, const time_t seconds) {
+    co_await bot->co_sleep(seconds);
+    bot->message_create(dpp::message(channel, std::format("Time to bump the server!\n"
+    "<@&{}>, could someone please run `/bump`?", config["role_ids"]["bump_reminder"].get<uint64_t>())
+    ).set_allowed_mentions(false, true));
+    BUMP_TIMER_ENABLED = false;
+}

@@ -140,3 +140,21 @@ void meta::remindme(const dpp::slashcommand_t &event, sqlite3* db) {
     event.edit_original_response(dpp::message(std::format(
     "I will remind you in {} (<t:{}:F>).", fancytime, reminder.end_time)));
 }
+
+void meta::set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json &config) {
+    if (util::BUMP_TIMER_ENABLED) {
+        event.reply(dpp::message("The bump timer is already running.").set_flags(dpp::m_ephemeral));
+        return;
+    }
+    // Get timer length
+    time_t minutes;
+    try {
+        minutes = std::get<int64_t>(event.get_parameter("minutes"));
+    } catch (const std::bad_variant_access&) {
+        minutes = 120;
+    }
+    // Start timer and send confirmation
+    util::BUMP_TIMER_ENABLED = true;
+    util::handle_bump(event.owner, config, event.command.channel_id, minutes * 60LL);
+    event.reply(dpp::message(std::format("Timer set for {} minutes.", minutes)).set_flags(dpp::m_ephemeral));
+}

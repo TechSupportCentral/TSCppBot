@@ -23,6 +23,11 @@ namespace util {
     inline std::ofstream LOG_FILE;
 
     /**
+     * Whether the bump timer is enabled
+     */
+    inline bool BUMP_TIMER_ENABLED = false;
+
+    /**
      * Possible result types for a slash command search
      */
     enum command_search_result {
@@ -147,4 +152,13 @@ namespace util {
      * @return
      */
     dpp::job handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json& config, mute mute);
+
+    /**
+     * Wait for some time then send a DISBOARD bump reminder.
+     * @param bot Bot cluster to send reminder message with
+     * @param config JSON bot config data
+     * @param channel ID of channel to send reminder to
+     * @param seconds Number of seconds to wait
+     */
+    dpp::job handle_bump(dpp::cluster* bot, const nlohmann::json& config, dpp::snowflake channel, time_t seconds);
 }

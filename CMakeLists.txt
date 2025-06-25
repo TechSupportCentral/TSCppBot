@@ -5,7 +5,8 @@ endif()
 
 project(TSCppBot)
 file(GLOB COMMAND_MODULE_SOURCE "src/command_modules/*.cpp")
-add_executable(TSCppBot src/main.cpp src/util.cpp ${COMMAND_MODULE_SOURCE})
+file(GLOB LISTENER_SOURCE "src/listeners/*.cpp")
+add_executable(TSCppBot src/main.cpp src/util.cpp ${COMMAND_MODULE_SOURCE} ${LISTENER_SOURCE})
 
 if(WIN32)
     find_package(dpp CONFIG REQUIRED)

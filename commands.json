@@ -99,6 +99,20 @@
         }
       ],
       "permission_level": "global"
+    },
+    {
+      "name": "set-bump-timer",
+      "description": "Set the DISBOARD bump reminder timer",
+      "options": [
+        {
+          "name": "minutes",
+          "description": "Number of minutes to set the timer to (defaults to 2 hours)",
+          "type": 4,
+          "required": false,
+          "min_value": 0
+        }
+      ],
+      "permission_level": "admin"
     }
   ],
   "moderation": [

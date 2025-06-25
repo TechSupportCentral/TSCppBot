@@ -24,4 +24,5 @@ namespace meta {
     dpp::task<> dm(const dpp::slashcommand_t &event, const nlohmann::json &config);
     void announce(const dpp::slashcommand_t &event, const nlohmann::json &config);
     void remindme(const dpp::slashcommand_t &event, sqlite3* db);
+    void set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json &config);
 }

@@ -1,4 +1,4 @@
-/* template: Command module template
+/* template: Listener template
  * Copyright 2025 Ben Westover <me@benthetechguy.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -12,8 +12,9 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "template.h"
+#pragma once
+#include <dpp/dpp.h>
 
-void command_template::example_command(const dpp::slashcommand_t &event) {
-    event.reply("Hello, world!");
+namespace message_create {
+    void on_message(const dpp::message_create_t& event, const nlohmann::json& config);
 }

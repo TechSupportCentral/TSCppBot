@@ -1,4 +1,4 @@
-/* template: Command module template
+/* template: Listener template
  * Copyright 2025 Ben Westover <me@benthetechguy.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -14,6 +14,6 @@
  */
 #include "template.h"
 
-void command_template::example_command(const dpp::slashcommand_t &event) {
-    event.reply("Hello, world!");
+void listener_template::example_handler(const dpp::event_dispatch_t &event) {
+    std::cout << event.raw_event;
 }

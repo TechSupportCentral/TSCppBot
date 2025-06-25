@@ -15,6 +15,6 @@
 #pragma once
 #include <dpp/dpp.h>
 
-namespace template_ns {
+namespace command_template {
     void example_command(const dpp::slashcommand_t &event);
 }

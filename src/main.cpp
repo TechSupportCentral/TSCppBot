@@ -16,6 +16,7 @@
 #include "command_modules/moderation.h"
 #include "command_modules/server_info.h"
 #include "command_modules/db_commands.h"
+#include "listeners/message_create.h"
 #include "util.h"
 #include <fstream>
 
@@ -38,11 +39,11 @@ int main(int argc, char* argv[]) {
     if (argc > 1) {
         // If the first char of the first arg is a dash, assume user is trying to specify an option
         if (argv[1][0] == '-') {
-            std::cout << "Usage: " << argv[0] << " [data path] [DB filename] [log filename]" << std::endl
-                      << "Default data path is the parent of the current directory." << std::endl
-                      << "Default DB filename is TSCppBot.db." << std::endl
-                      << "Default log filename is based on the current time." << std::endl
-                      << "If a specified log file already exists, its contents will be appended to." << std::endl;
+            std::cout << "Usage: " << argv[0] << " [data path] [DB filename] [log filename]\n"
+                         "Default data path is the parent of the current directory.\n"
+                         "Default DB filename is TSCppBot.db.\n"
+                         "Default log filename is based on the current time.\n"
+                         "If a specified log file already exists, its contents will be appended to.\n";
             return 0;
         }
         // Make sure data path is a valid dir
@@ -223,6 +224,7 @@ int main(int argc, char* argv[]) {
         else if (command_name == "announce") meta::announce(event, config);
         else if (command_name == "dm") co_await meta::dm(event, config);
         else if (command_name == "remindme") meta::remindme(event, db);
+        else if (command_name == "set-bump-timer") meta::set_bump_timer(event, config);
         else if (command_name == "rules") server_info::rules(event, config);
         else if (command_name == "rule") server_info::rule(event, config);
         else if (command_name == "suggest") server_info::suggest(event, config);
@@ -263,7 +265,12 @@ int main(int argc, char* argv[]) {
         else if (event.custom_id.substr(0, 15) == "edit_field_form") db_commands::edit_embed_command_field(event, db_embed_commands, db);
     });
 
-    bot.on_ready([&bot, &config, &commands, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
+    // Listeners
+    bot.on_message_create([&config](const dpp::message_create_t &event) {
+        message_create::on_message(event, config);
+    });
+
+    bot.on_ready([&config, &commands, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
         if (dpp::run_once<struct register_bot_commands>()) {
             std::vector<dpp::slashcommand> global_commands;
             std::vector<dpp::slashcommand> tsc_commands;
@@ -272,7 +279,7 @@ int main(int argc, char* argv[]) {
                     dpp::slashcommand slash_command(
                         command["name"].get<std::string>(),
                         command["description"].get<std::string>(),
-                        bot.me.id
+                        event.owner->me.id
                     );
 
                     for (auto &option : command["options"]) {
@@ -332,7 +339,7 @@ int main(int argc, char* argv[]) {
                 }
             }
             for (const auto& [name, command] : db_text_commands) {
-                dpp::slashcommand slash_command(name, command.description, bot.me.id);
+                dpp::slashcommand slash_command(name, command.description, event.owner->me.id);
                 if (command.global) {
                     slash_command.set_dm_permission(true);
                     global_commands.push_back(slash_command);
@@ -341,7 +348,7 @@ int main(int argc, char* argv[]) {
                 }
             }
             for (const auto& [name, command] : db_embed_commands) {
-                dpp::slashcommand slash_command(name, command.description, bot.me.id);
+                dpp::slashcommand slash_command(name, command.description, event.owner->me.id);
                 if (command.global) {
                     slash_command.set_dm_permission(true);
                     global_commands.push_back(slash_command);
@@ -349,10 +356,10 @@ int main(int argc, char* argv[]) {
                     tsc_commands.push_back(slash_command);
                 }
             }
-            bot.global_bulk_command_create(global_commands);
-            bot.guild_bulk_command_create(tsc_commands, config["guild_id"]);
+            event.owner->global_bulk_command_create(global_commands);
+            event.owner->guild_bulk_command_create(tsc_commands, config["guild_id"]);
         }
-        bot.set_presence(dpp::presence(dpp::ps_online, dpp::at_watching, "TSC"));
+        event.owner->set_presence(dpp::presence(dpp::ps_online, dpp::at_watching, "TSC"));
 
         // Resume remaining reminders
         std::vector<util::reminder> reminder_list;
@@ -386,7 +393,7 @@ int main(int argc, char* argv[]) {
                 log_message += " from " + user->username;
             }
             util::log("INFO", log_message);
-            util::remind(&bot, db, reminder);
+            util::remind(event.owner, db, reminder);
         }
 
         // Resume remaining mutes
@@ -432,7 +439,7 @@ int main(int argc, char* argv[]) {
                 log_message += " from " + user->username;
             }
             util::log("INFO", log_message);
-            util::handle_mute(&bot, db, config, mute);
+            util::handle_mute(event.owner, db, config, mute);
         }
     });
 
