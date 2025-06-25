@@ -55,8 +55,8 @@ void message_create::on_message(const dpp::message_create_t& event, const nlohma
             event.owner->message_create(dpp::message(event.msg.channel_id, dpp::embed()
                 .set_color(0x00A0A0).set_title("Thank you for bumping the server!")
                 .set_description("Vote for Tech Support Central on top.gg at https://top.gg/servers/824042976371277884")));
-            if (!util::BUMP_TIMER_ENABLED) {
-                util::BUMP_TIMER_ENABLED = true;
+            if (!util::BUMP_TIMER_RUNNING) {
+                util::BUMP_TIMER_RUNNING = true;
                 util::handle_bump(event.owner, config, event.msg.channel_id, 7200);
             }
         }
@@ -75,6 +75,6 @@ void message_create::on_message(const dpp::message_create_t& event, const nlohma
             )).set_allowed_mentions(false));
         }
     } else if (event.msg.content.find(" virus") != std::string::npos) {
-        event.reply("We suggest you to check for viruses and suspicious processes with Malwarebytes: https://malwarebytes.com/mwb-download");
+        event.reply("We suggest that you check for viruses and suspicious processes with Malwarebytes: https://malwarebytes.com/mwb-download");
     }
 }

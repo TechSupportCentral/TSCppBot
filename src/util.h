@@ -23,9 +23,9 @@ namespace util {
     inline std::ofstream LOG_FILE;
 
     /**
-     * Whether the bump timer is enabled
+     * Whether the bump timer is running
      */
-    inline bool BUMP_TIMER_ENABLED = false;
+    inline bool BUMP_TIMER_RUNNING = false;
 
     /**
      * Possible result types for a slash command search

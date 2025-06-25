@@ -142,7 +142,7 @@ void meta::remindme(const dpp::slashcommand_t &event, sqlite3* db) {
 }
 
 void meta::set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json &config) {
-    if (util::BUMP_TIMER_ENABLED) {
+    if (util::BUMP_TIMER_RUNNING) {
         event.reply(dpp::message("The bump timer is already running.").set_flags(dpp::m_ephemeral));
         return;
     }
@@ -154,7 +154,7 @@ void meta::set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json
         minutes = 120;
     }
     // Start timer and send confirmation
-    util::BUMP_TIMER_ENABLED = true;
+    util::BUMP_TIMER_RUNNING = true;
     util::handle_bump(event.owner, config, event.command.channel_id, minutes * 60LL);
     event.reply(dpp::message(std::format("Timer set for {} minutes.", minutes)).set_flags(dpp::m_ephemeral));
 }

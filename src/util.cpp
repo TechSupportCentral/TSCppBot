@@ -291,5 +291,5 @@ dpp::job util::handle_bump(dpp::cluster* bot, const nlohmann::json& config, cons
     bot->message_create(dpp::message(channel, std::format("Time to bump the server!\n"
     "<@&{}>, could someone please run `/bump`?", config["role_ids"]["bump_reminder"].get<uint64_t>())
     ).set_allowed_mentions(false, true));
-    BUMP_TIMER_ENABLED = false;
+    BUMP_TIMER_RUNNING = false;
 }
