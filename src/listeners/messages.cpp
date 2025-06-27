@@ -1,4 +1,4 @@
-/* message_create: Handler for new messages posted to the server or DMs
+/* messages: Handlers for events involving messages
  * Copyright 2025 Ben Westover <me@benthetechguy.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -12,14 +12,15 @@
  * You should have received a copy of the GNU General Public License along with
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "message_create.h"
+#include "messages.h"
 #include "../util.h"
 #include <dpp/unicode_emoji.h>
 
-void message_create::on_message(const dpp::message_create_t& event, const nlohmann::json& config) {
+void messages::on_message(const dpp::message_create_t& event, const nlohmann::json& config) {
     if (event.msg.author == event.owner->me) {
         return;
     }
+    util::MESSAGE_CACHE.push(event.msg);
     if (event.msg.is_dm()) {
         dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_thumbnail(event.msg.author.get_avatar_url())
                                        .set_title("DM Received").add_field("From", event.msg.author.username, true)

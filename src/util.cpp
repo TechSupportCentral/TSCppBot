@@ -145,6 +145,23 @@ bool util::is_valid_command_name(const std::string_view command_name) {
     return valid;
 }
 
+dpp::task<dpp::confirmation_callback_t> util::get_message_cached(dpp::cluster* bot, const dpp::snowflake id, const dpp::snowflake channel) {
+    // Try to get message by ID from cache
+    auto it = MESSAGE_CACHE.begin();
+    while (it != MESSAGE_CACHE.end()) {
+        if (it->id == id) {
+            break;
+        }
+        ++it;
+    }
+    // If it's not found in the cache, try to get it from Discord
+    if (it == MESSAGE_CACHE.end()) {
+        co_return co_await bot->co_message_get(id, channel);
+    }
+    // Otherwise, construct a confirmation_callback_t with the message inside
+    co_return dpp::confirmation_callback_t(bot, *it, dpp::http_request_completion_t());
+}
+
 dpp::task<std::pair<util::command_search_result, dpp::snowflake>> util::find_command(dpp::cluster* bot, const nlohmann::json &config, const std::string command_name) {
     dpp::snowflake command_id(0);
     command_search_result result = COMMAND_NOT_FOUND;

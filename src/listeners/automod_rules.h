@@ -1,4 +1,4 @@
-/* template: Listener template
+/* automod_rules: Handlers for automod rule changes
  * Copyright 2025 Ben Westover <me@benthetechguy.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -15,6 +15,8 @@
 #pragma once
 #include <dpp/dpp.h>
 
-namespace message_create {
-    void on_message(const dpp::message_create_t& event, const nlohmann::json& config);
+namespace automod_rules {
+    dpp::task<> on_automod_rule_add(const dpp::automod_rule_create_t &event, const nlohmann::json& config);
+    dpp::task<> on_automod_rule_remove(const dpp::automod_rule_delete_t &event, const nlohmann::json& config);
+    dpp::task<> on_automod_rule_edit(const dpp::automod_rule_update_t &event, const nlohmann::json& config);
 }

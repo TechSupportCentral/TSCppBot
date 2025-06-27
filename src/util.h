@@ -28,6 +28,106 @@ namespace util {
     inline bool BUMP_TIMER_RUNNING = false;
 
     /**
+     * Ring buffer used to store the newest N objects of type T
+     * @tparam T Type of element to store
+     * @tparam N Size of buffer
+     */
+    template<typename T, size_t N>
+    class cache {
+        T data[N + 1]; /**< Underlying array everything is stored in */
+        T* head = data; /**< Pointer to the oldest element placed in the buffer */
+        T* tail = data - 1; /**< Pointer to the newest element placed in the buffer */
+        size_t size = 0; /**< The number of elements currently stored */
+        public:
+            /**
+             * Push a new element into the cache, making the oldest element inaccessible if the cache is full.
+             * @param element The element to push to the cache
+             */
+            void push(T element) {
+                /* If buffer is not yet full:
+                 * Head is not moved
+                 * Tail is moved forward one position, then element is placed at tail
+                 * Size is incremented by one
+                 */
+                if (size < N) {
+                    *(++tail) = element;
+                    size++;
+                /* If buffer is full and head is at the end of the array:
+                 * Head is moved to the beginning of the array
+                 * Tail is moved forward one position, then element is placed at tail
+                 * Size is not incremented (buffer stays full)
+                 */
+                } else if (head == data + N) {
+                    *(++tail) = element;
+                    head = data;
+                /* If buffer is full and tail is at the end of the array:
+                 * Head is moved forward one position
+                 * Tail is moved to the beginning of the array, then element is placed at tail
+                 * Size is not incremented (buffer stays full)
+                 */
+                } else if (tail == data + N) {
+                    tail = data;
+                    *tail = element;
+                    ++head;
+                /* If buffer is full and neither head nor tail are at the end of the array:
+                 * Head is moved forward one position
+                 * Tail is moved forward one position, then element is placed at tail
+                 * Size is not incremented (buffer stays full)
+                 */
+                } else {
+                    *(++tail) = element;
+                    ++head;
+                }
+            }
+            /**
+             * Read-only iterator to check the cache from oldest to newest elements
+             */
+            struct Iterator {
+                using iterator_category = std::input_iterator_tag;
+                using difference_type = std::ptrdiff_t;
+                using value_type = T;
+                using pointer = T*;
+                using reference = T&;
+                explicit Iterator(pointer ptr) : m_ptr(ptr) {}
+
+                reference operator*() const { return *m_ptr; }
+                pointer operator->() { return m_ptr; }
+                Iterator& operator++() {
+                    // Wrap around when the iterator is at the end of the array
+                    if (m_ptr == data + N) {
+                        m_ptr = data;
+                    } else {
+                        ++m_ptr;
+                    }
+                    return *this;
+                }
+                Iterator operator++(int) {
+                    Iterator tmp = *this;
+                    ++(*this);
+                    return tmp;
+                }
+                friend bool operator== (const Iterator& a, const Iterator& b) { return a.m_ptr == b.m_ptr; }
+                friend bool operator!= (const Iterator& a, const Iterator& b) { return a.m_ptr != b.m_ptr; }
+
+                private:
+                    pointer m_ptr;
+            };
+            /**
+             * The cache begins at the oldest element (head)
+             */
+            Iterator begin() { return Iterator(head); }
+            /**
+             * The cache ends at the position between the newest and oldest elements (one position after tail)
+             */
+            Iterator end() { return Iterator(tail + 1); }
+    };
+
+    /**
+     * Global cache of the 100 latest messages
+     */
+    inline cache<dpp::message, 100> MESSAGE_CACHE;
+
+    /**
      * Possible result types for a slash command search
      */
     enum command_search_result {
@@ -115,6 +215,15 @@ namespace util {
      * @return true if the proposed command name is valid
      */
     bool is_valid_command_name(std::string_view command_name);
+
+    /**
+     * Try to find a message in the cache, and get it via API if it's not cached.
+     * @param bot Bot cluster to use for API call if message cannot be found in cache
+     * @param channel ID of the channel the message is in
+     * @param id ID of the message
+     * @return confirmation_callback_t containing the message if it exists.
+     */
+    dpp::task<dpp::confirmation_callback_t> get_message_cached(dpp::cluster* bot, dpp::snowflake id, dpp::snowflake channel);
 
     /**
      * Find a slash command by name

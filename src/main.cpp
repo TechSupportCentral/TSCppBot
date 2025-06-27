@@ -16,7 +16,8 @@
 #include "command_modules/moderation.h"
 #include "command_modules/server_info.h"
 #include "command_modules/db_commands.h"
-#include "listeners/message_create.h"
+#include "listeners/messages.h"
+#include "listeners/automod_rules.h"
 #include "util.h"
 #include <fstream>
 
@@ -267,9 +268,16 @@ int main(int argc, char* argv[]) {
 
     // Listeners
     bot.on_message_create([&config](const dpp::message_create_t &event) {
-        message_create::on_message(event, config);
+        messages::on_message(event, config);
+    });
+    bot.on_automod_rule_create([&config](const dpp::automod_rule_create_t &event) -> dpp::task<> {
+        co_await automod_rules::on_automod_rule_add(event, config);
+    });
+    bot.on_automod_rule_delete([&config](const dpp::automod_rule_delete_t &event) -> dpp::task<> {
+        co_await automod_rules::on_automod_rule_remove(event, config);
     });
 
+    // TODO: Autodetect bump timer on bot restart?
     bot.on_ready([&config, &commands, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
         if (dpp::run_once<struct register_bot_commands>()) {
             std::vector<dpp::slashcommand> global_commands;
