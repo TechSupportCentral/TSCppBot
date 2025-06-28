@@ -32,7 +32,7 @@ namespace util {
      * @tparam T Type of element to store
      * @tparam N Size of buffer
      */
-    template<typename T, size_t N>
+    template<std::default_initializable T, size_t N>
     class cache {
         T data[N + 1]; /**< Underlying array everything is stored in */
         T* head = data; /**< Pointer to the oldest element placed in the buffer */
@@ -80,52 +80,91 @@ namespace util {
                 }
             }
             /**
-             * Read-only iterator to check the cache from oldest to newest elements
+             * Iterator to traverse elements of the cache, in either direction
              */
             struct Iterator {
-                using iterator_category = std::input_iterator_tag;
+                using iterator_category = std::random_access_iterator_tag;
                 using difference_type = std::ptrdiff_t;
                 using value_type = T;
                 using pointer = T*;
                 using reference = T&;
-                explicit Iterator(pointer ptr) : m_ptr(ptr) {}
+                Iterator(pointer data, pointer ptr) {
+                    m_data = data;
+                    m_ptr = ptr;
+                }
 
                 reference operator*() const { return *m_ptr; }
                 pointer operator->() { return m_ptr; }
+                // Prefix increment
                 Iterator& operator++() {
                     // Wrap around when the iterator is at the end of the array
-                    if (m_ptr == data + N) {
-                        m_ptr = data;
+                    if (m_ptr == m_data + N) {
+                        m_ptr = m_data;
                     } else {
                         ++m_ptr;
                     }
                     return *this;
                 }
+                // Postfix increment
                 Iterator operator++(int) {
                     Iterator tmp = *this;
                     ++(*this);
                     return tmp;
                 }
+                // Prefix decrement
+                Iterator& operator--() {
+                    // Wrap around when the iterator is at the beginning of the array
+                    if (m_ptr == m_data) {
+                        m_ptr = m_data + N;
+                    } else {
+                        --m_ptr;
+                    }
+                    return *this;
+                }
+                // Postfix decrement
+                Iterator operator--(int) {
+                    Iterator tmp = *this;
+                    --(*this);
+                    return tmp;
+                }
+                Iterator operator+(const difference_type n) {
+                    Iterator tmp = *this;
+                    difference_type cur_index = m_ptr - m_data;
+                    difference_type new_index;
+                    if (n >= 0) {
+                        // Use modulo to wrap around the ring buffer
+                        new_index = (cur_index + n) % (N + 1);
+                    } else {
+                        // True modulo instead of negative remainder
+                        new_index = (cur_index + (N + 1 + n)) % (N + 1);
+                    }
+                    tmp.m_ptr = m_data + new_index;
+                    return tmp;
+                }
+                Iterator operator-(const difference_type n) {
+                    return *this + -n;
+                }
                 friend bool operator== (const Iterator& a, const Iterator& b) { return a.m_ptr == b.m_ptr; }
                 friend bool operator!= (const Iterator& a, const Iterator& b) { return a.m_ptr != b.m_ptr; }
 
                 private:
+                    pointer m_data;
                     pointer m_ptr;
             };
             /**
              * The cache begins at the oldest element (head)
              */
-            Iterator begin() { return Iterator(head); }
+            Iterator begin() { return Iterator(data, head); }
             /**
              * The cache ends at the position between the newest and oldest elements (one position after tail)
              */
-            Iterator end() { return Iterator(tail + 1); }
+            Iterator end() { return Iterator(data, tail + 1); }
     };
 
     /**
-     * Global cache of the 100 latest messages
+     * Global cache of the 1000 latest messages (~1.25 MB)
      */
-    inline cache<dpp::message, 100> MESSAGE_CACHE;
+    inline cache<dpp::message, 1000> MESSAGE_CACHE;
 
     /**
      * Possible result types for a slash command search

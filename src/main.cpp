@@ -270,6 +270,12 @@ int main(int argc, char* argv[]) {
     bot.on_message_create([&config](const dpp::message_create_t &event) {
         messages::on_message(event, config);
     });
+    bot.on_message_delete([&config](const dpp::message_delete_t &event) -> dpp::task<> {
+        co_await messages::on_message_deleted(event, config);
+    });
+    bot.on_message_update([&config](const dpp::message_update_t &event) -> dpp::task<> {
+        co_await messages::on_message_edited(event, config);
+    });
     bot.on_automod_rule_create([&config](const dpp::automod_rule_create_t &event) -> dpp::task<> {
         co_await automod_rules::on_automod_rule_add(event, config);
     });

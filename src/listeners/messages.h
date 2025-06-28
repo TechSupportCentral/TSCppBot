@@ -16,7 +16,15 @@
 #include <dpp/dpp.h>
 
 namespace messages {
+    /**
+     * Get message content and any attachments and add this info as fields to an embed
+     * @param embed Embed to add these fields to
+     * @param message Message to examine
+     */
+    void add_message_content_fields(dpp::embed& embed, const dpp::message& message);
+
+    // Event handlers
     void on_message(const dpp::message_create_t& event, const nlohmann::json& config);
     dpp::task<> on_message_deleted(const dpp::message_delete_t& event, const nlohmann::json& config);
-    dpp::task<> on_message_edited(const dpp::message_delete_t& event, const nlohmann::json& config);
+    dpp::task<> on_message_edited(const dpp::message_update_t& event, const nlohmann::json& config);
 }

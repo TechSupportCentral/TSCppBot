@@ -51,7 +51,7 @@ dpp::task<> server_info::suggestion_response(const dpp::slashcommand_t &event, c
     // Send "thinking" response to allow time for Discord API
     dpp::async thinking = event.co_thinking();
     dpp::snowflake message_id = std::stoull(std::get<std::string>(event.get_parameter("suggestion_id")));
-    dpp::confirmation_callback_t suggestion = co_await event.owner->co_message_get(message_id, config["log_channel_ids"]["suggestion_list"]);
+    dpp::confirmation_callback_t suggestion = co_await util::get_message_cached(event.owner, message_id, config["log_channel_ids"]["suggestion_list"]);
     if (suggestion.is_error()) {
         co_await thinking;
         event.edit_original_response(dpp::message("Suggestion message not found."));

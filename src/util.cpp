@@ -146,19 +146,18 @@ bool util::is_valid_command_name(const std::string_view command_name) {
 }
 
 dpp::task<dpp::confirmation_callback_t> util::get_message_cached(dpp::cluster* bot, const dpp::snowflake id, const dpp::snowflake channel) {
-    // Try to get message by ID from cache
-    auto it = MESSAGE_CACHE.begin();
-    while (it != MESSAGE_CACHE.end()) {
+    // Try to get message by ID from cache, searching backwards (latest to earliest messages)
+    auto it = MESSAGE_CACHE.end();
+    while (it-- != MESSAGE_CACHE.begin()) {
         if (it->id == id) {
             break;
         }
-        ++it;
     }
     // If it's not found in the cache, try to get it from Discord
-    if (it == MESSAGE_CACHE.end()) {
+    if (it == MESSAGE_CACHE.begin() - 1) {
         co_return co_await bot->co_message_get(id, channel);
     }
-    // Otherwise, construct a confirmation_callback_t with the message inside
+    // Construct a confirmation_callback_t with the message inside
     co_return dpp::confirmation_callback_t(bot, *it, dpp::http_request_completion_t());
 }
 
