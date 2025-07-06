@@ -276,6 +276,12 @@ int main(int argc, char* argv[]) {
     bot.on_message_update([&config](const dpp::message_update_t &event) -> dpp::task<> {
         co_await messages::on_message_edited(event, config);
     });
+    bot.on_message_reaction_add([&config](const dpp::message_reaction_add_t &event) -> dpp::task<> {
+        co_await messages::on_reaction(event, config);
+    });
+    bot.on_message_reaction_remove([&config](const dpp::message_reaction_remove_t &event) -> dpp::task<> {
+        co_await messages::on_reaction_removed(event, config);
+    });
     bot.on_automod_rule_create([&config](const dpp::automod_rule_create_t &event) -> dpp::task<> {
         co_await automod_rules::on_automod_rule_add(event, config);
     });

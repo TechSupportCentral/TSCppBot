@@ -152,14 +152,63 @@ dpp::task<> messages::on_message_edited(const dpp::message_update_t& event, cons
         if (old_msg.content == event.msg.content) {
             co_return;
         }
-
-        add_message_content_fields(embed, event.msg);
-        embed.fields.emplace(embed.fields.begin() + 2, "Original Message:", old_msg.content, false);
-        embed.fields[3].name = "Edited Message:";
+        embed.add_field("Original Content:", old_msg.content, false);
+        embed.add_field("Edited Content:", event.msg.content, false);
 
         // Update message in cache to include edits
         *it = event.msg;
     }
     // Send embed to log
     event.owner->message_create(dpp::message(config["log_channel_ids"]["message_edited"], embed));
+}
+
+dpp::task<> messages::on_reaction(const dpp::message_reaction_add_t& event, const nlohmann::json& config) {
+    if (event.message_id == config["listen_message_ids"]["bump_reminders"].get<dpp::snowflake>() && event.reacting_emoji.name == "white_check_mark") {
+        std::vector<dpp::snowflake> roles = event.reacting_member.get_roles();
+        if (std::ranges::find(roles, config[""][""].get<dpp::snowflake>()) == roles.end()) {
+            dpp::confirmation_callback_t role_add_conf = co_await event.owner->co_guild_member_add_role(event.reacting_guild.id, event.reacting_user.id, config["role_ids"]["bump_reminder"]);
+            if (role_add_conf.is_error()) {
+                event.owner->direct_message_create(event.reacting_user.id, dpp::message("Failed to add bump reminder role; please contact the owners for assistance."));
+            } else {
+                event.owner->direct_message_create(event.reacting_user.id, dpp::message("Added bump reminder role successfully."));
+            }
+        } else {
+            event.owner->direct_message_create(event.reacting_user.id, dpp::message("Cannot add bump reminder role; you already have it."));
+        }
+    } else if (event.message_id == config["listen_message_ids"]["ticket_create"].get<dpp::snowflake>() && event.reacting_emoji.name == "tickets") {
+        // Create private thread for ticket
+        std::string title = std::string("Ticket for ") + event.reacting_user.username;
+        dpp::snowflake channel_id = config["log_channel_ids"]["tickets"];
+        dpp::confirmation_callback_t confirmation = co_await event.owner->co_thread_create
+        (title, channel_id, 10080, dpp::CHANNEL_PRIVATE_THREAD, false, 0);
+        if (confirmation.is_error()) {
+            event.owner->direct_message_create(event.reacting_user.id, dpp::message("Failed to create ticket channel."));
+        }
+        dpp::thread thread = std::get<dpp::thread>(confirmation.value);
+        // Mention moderators to add them to ticket and notify them at the same time
+        event.owner->message_create(dpp::message(thread.id, event.reacting_user.get_mention()
+        + std::format(", your ticket has been created. Please explain your rationale and wait for a <@&{}> to respond.",
+        config["role_ids"]["moderator"].get<uint64_t>())).set_allowed_mentions(true, true));
+        // Remove reaction
+        event.owner->message_delete_reaction(event.message_id, event.channel_id, event.reacting_user.id, std::string("tickets:") + event.reacting_emoji.id.str());
+    }
+}
+
+dpp::task<> messages::on_reaction_removed(const dpp::message_reaction_remove_t& event, const nlohmann::json& config) {
+    if (event.message_id == config["listen_message_ids"]["bump_reminders"].get<dpp::snowflake>() && event.reacting_emoji.name == "white_check_mark") {
+        dpp::confirmation_callback_t member_conf = co_await event.owner->co_guild_get_member(event.reacting_guild.id, event.reacting_user_id);
+        if (!member_conf.is_error()) {
+            std::vector<dpp::snowflake> roles = std::get<dpp::guild_member>(member_conf.value).get_roles();
+            if (std::ranges::find(roles, config[""][""].get<dpp::snowflake>()) == roles.end()) {
+                event.owner->direct_message_create(event.reacting_user_id, dpp::message("Cannot remove bump reminder role; you didn't have it to begin with."));
+            } else {
+                dpp::confirmation_callback_t role_remove_conf = co_await event.owner->co_guild_member_remove_role(event.reacting_guild.id, event.reacting_user_id, config["role_ids"]["bump_reminder"]);
+                if (role_remove_conf.is_error()) {
+                    event.owner->direct_message_create(event.reacting_user_id, dpp::message("Failed to remove bump reminder role; please contact the owners for assistance."));
+                } else {
+                    event.owner->direct_message_create(event.reacting_user_id, dpp::message("Removed bump reminder role successfully."));
+                }
+            }
+        }
+    }
 }

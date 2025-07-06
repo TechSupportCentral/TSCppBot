@@ -27,4 +27,6 @@ namespace messages {
     void on_message(const dpp::message_create_t& event, const nlohmann::json& config);
     dpp::task<> on_message_deleted(const dpp::message_delete_t& event, const nlohmann::json& config);
     dpp::task<> on_message_edited(const dpp::message_update_t& event, const nlohmann::json& config);
+    dpp::task<> on_reaction(const dpp::message_reaction_add_t& event, const nlohmann::json& config);
+    dpp::task<> on_reaction_removed(const dpp::message_reaction_remove_t& event, const nlohmann::json& config);
 }

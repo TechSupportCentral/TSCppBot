@@ -40,6 +40,10 @@
     "role_changed": 854429525480046598,
     "bot_dm": 854429525647687703
   },
+  "listen_message_ids": {
+    "bump_reminders": 878813488582111282,
+    "ticket_create": 858255538190417991
+  },
   "rules": [
     "Be respectful to our Support Team; they provide support voluntarily for free during their own time.",
     "Profanity is not allowed on this server. If you send a message containing profanity, it will be deleted.",

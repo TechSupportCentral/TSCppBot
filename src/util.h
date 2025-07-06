@@ -83,7 +83,7 @@ namespace util {
              * Iterator to traverse elements of the cache, in either direction
              */
             struct Iterator {
-                using iterator_category = std::random_access_iterator_tag;
+                using iterator_category = std::bidirectional_iterator_tag;
                 using difference_type = std::ptrdiff_t;
                 using value_type = T;
                 using pointer = T*;
@@ -129,7 +129,7 @@ namespace util {
                 }
                 Iterator operator+(const difference_type n) {
                     Iterator tmp = *this;
-                    difference_type cur_index = m_ptr - m_data;
+                    const difference_type cur_index = m_ptr - m_data;
                     difference_type new_index;
                     if (n >= 0) {
                         // Use modulo to wrap around the ring buffer
@@ -162,7 +162,7 @@ namespace util {
     };
 
     /**
-     * Global cache of the 1000 latest messages (~1.25 MB)
+     * Global cache of the 1000 latest messages (~1.25 MB plus string contents)
      */
     inline cache<dpp::message, 1000> MESSAGE_CACHE;
 
