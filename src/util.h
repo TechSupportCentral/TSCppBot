@@ -167,6 +167,11 @@ namespace util {
     inline cache<dpp::message, 1000> MESSAGE_CACHE;
 
     /**
+     * Global cache of all automod rules (max 9 per guild)
+     */
+    inline cache<dpp::automod_rule, 9> AUTOMOD_RULE_CACHE;
+
+    /**
      * Possible result types for a slash command search
      */
     enum command_search_result {

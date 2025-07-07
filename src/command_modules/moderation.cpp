@@ -16,7 +16,6 @@
 #include "../util.h"
 #include <map>
 
-// TODO: Fix thread creation
 dpp::task<> moderation::create_ticket(const dpp::slashcommand_t &event, const nlohmann::json &config) {
     // Send "thinking" response to allow time for Discord API
     dpp::async thinking = event.co_thinking(true);

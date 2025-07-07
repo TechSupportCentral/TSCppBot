@@ -267,6 +267,15 @@ int main(int argc, char* argv[]) {
     });
 
     // Listeners
+    bot.on_automod_rule_create([&config](const dpp::automod_rule_create_t &event) -> dpp::task<> {
+        co_await automod_rules::on_automod_rule_add(event, config);
+    });
+    bot.on_automod_rule_delete([&config](const dpp::automod_rule_delete_t &event) {
+        automod_rules::on_automod_rule_remove(event, config);
+    });
+    bot.on_automod_rule_update([&config](const dpp::automod_rule_update_t &event) {
+        automod_rules::on_automod_rule_edit(event, config);
+    });
     bot.on_message_create([&config](const dpp::message_create_t &event) {
         messages::on_message(event, config);
     });
@@ -282,15 +291,9 @@ int main(int argc, char* argv[]) {
     bot.on_message_reaction_remove([&config](const dpp::message_reaction_remove_t &event) -> dpp::task<> {
         co_await messages::on_reaction_removed(event, config);
     });
-    bot.on_automod_rule_create([&config](const dpp::automod_rule_create_t &event) -> dpp::task<> {
-        co_await automod_rules::on_automod_rule_add(event, config);
-    });
-    bot.on_automod_rule_delete([&config](const dpp::automod_rule_delete_t &event) -> dpp::task<> {
-        co_await automod_rules::on_automod_rule_remove(event, config);
-    });
 
     // TODO: Autodetect bump timer on bot restart?
-    bot.on_ready([&config, &commands, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) {
+    bot.on_ready([&config, &commands, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) -> dpp::task<> {
         if (dpp::run_once<struct register_bot_commands>()) {
             std::vector<dpp::slashcommand> global_commands;
             std::vector<dpp::slashcommand> tsc_commands;
@@ -460,6 +463,14 @@ int main(int argc, char* argv[]) {
             }
             util::log("INFO", log_message);
             util::handle_mute(event.owner, db, config, mute);
+        }
+
+        // Add all automod rules to cache
+        dpp::confirmation_callback_t rule_conf = co_await event.owner->co_automod_rules_get(config["guild_id"]);
+        if (!rule_conf.is_error()) {
+            for (const dpp::automod_rule& rule : std::get<dpp::automod_rule_map>(rule_conf.value) | std::views::values) {
+                util::AUTOMOD_RULE_CACHE.push(rule);
+            }
         }
     });
 

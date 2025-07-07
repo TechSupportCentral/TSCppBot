@@ -42,6 +42,7 @@ void messages::add_message_content_fields(dpp::embed& embed, const dpp::message&
     }
 }
 
+// TODO: Detect when the same message is posted in multiple support channels
 void messages::on_message(const dpp::message_create_t& event, const nlohmann::json& config) {
     util::MESSAGE_CACHE.push(event.msg);
     if (event.msg.author == event.owner->me) {

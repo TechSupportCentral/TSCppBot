@@ -16,7 +16,8 @@
 #include <dpp/dpp.h>
 
 namespace automod_rules {
+    void add_rule_description_fields(dpp::embed& embed, const dpp::automod_rule& rule);
     dpp::task<> on_automod_rule_add(const dpp::automod_rule_create_t &event, const nlohmann::json& config);
-    dpp::task<> on_automod_rule_remove(const dpp::automod_rule_delete_t &event, const nlohmann::json& config);
-    dpp::task<> on_automod_rule_edit(const dpp::automod_rule_update_t &event, const nlohmann::json& config);
+    void on_automod_rule_remove(const dpp::automod_rule_delete_t &event, const nlohmann::json& config);
+    void on_automod_rule_edit(const dpp::automod_rule_update_t &event, const nlohmann::json& config);
 }
