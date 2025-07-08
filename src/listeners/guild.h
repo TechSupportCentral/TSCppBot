@@ -1,4 +1,4 @@
-/* automod_rules: Handlers for automod rule changes
+/* guild: Handlers for events related to the guild
  * Copyright 2025 Ben Westover <me@benthetechguy.net>
  *
  * This program is free software: you can redistribute it and/or modify it
@@ -15,9 +15,7 @@
 #pragma once
 #include <dpp/dpp.h>
 
-namespace automod_rules {
-    void add_rule_description_fields(dpp::embed& embed, const dpp::automod_rule& rule);
-    dpp::task<> on_automod_rule_add(const dpp::automod_rule_create_t &event, const nlohmann::json& config, std::vector<dpp::automod_rule>& automod_rules);
-    void on_automod_rule_remove(const dpp::automod_rule_delete_t &event, const nlohmann::json& config, std::vector<dpp::automod_rule>& automod_rules);
-    void on_automod_rule_edit(const dpp::automod_rule_update_t &event, const nlohmann::json& config, std::vector<dpp::automod_rule>& automod_rules);
+namespace guild {
+    void on_invite_created(const dpp::invite_create_t &event, const nlohmann::json& config, std::vector<dpp::invite>& invites);
+    void on_invite_deleted(const dpp::invite_delete_t &event, const nlohmann::json& config, std::vector<dpp::invite>& invites);
 }

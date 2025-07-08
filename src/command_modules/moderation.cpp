@@ -175,7 +175,7 @@ dpp::task<> moderation::inviteinfo(const dpp::slashcommand_t &event) {
     if (invite.expires_at == 0) {
         embed.add_field("Expires", "Never", false);
     } else {
-        embed.add_field("Expires", std::format("<t:{}>", invite.expires_at), false);
+        embed.add_field("Expires", std::format("<t:{}:R>", invite.expires_at), false);
     }
     co_await thinking;
     event.edit_original_response(dpp::message(embed));

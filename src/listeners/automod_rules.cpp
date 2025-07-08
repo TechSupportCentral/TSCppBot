@@ -130,8 +130,8 @@ void automod_rules::add_rule_description_fields(dpp::embed& embed, const dpp::au
     }
 }
 
-dpp::task<> automod_rules::on_automod_rule_add(const dpp::automod_rule_create_t &event, const nlohmann::json& config) {
-    util::AUTOMOD_RULE_CACHE.push(event.created);
+dpp::task<> automod_rules::on_automod_rule_add(const dpp::automod_rule_create_t &event, const nlohmann::json& config, std::vector<dpp::automod_rule>& automod_rules) {
+    automod_rules.push_back(event.created);
     dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(event.created.creator_id);
     dpp::user_identified user;
     if (user_conf.is_error()) {
@@ -147,22 +147,26 @@ dpp::task<> automod_rules::on_automod_rule_add(const dpp::automod_rule_create_t 
     event.owner->message_create(dpp::message(config["log_channel_ids"]["discord_updates"], embed));
 }
 
-void automod_rules::on_automod_rule_remove(const dpp::automod_rule_delete_t &event, const nlohmann::json& config) {
+void automod_rules::on_automod_rule_remove(const dpp::automod_rule_delete_t &event, const nlohmann::json& config, std::vector<dpp::automod_rule>& automod_rules) {
     dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Automod Rule Deleted")
                                    .add_field("Rule Name", event.deleted.name, true);
     add_rule_description_fields(embed, event.deleted);
     event.owner->message_create(dpp::message(config["log_channel_ids"]["discord_updates"], embed));
+    // Delete rule from cache if possible
+    if (const auto it = std::ranges::find(automod_rules, event.deleted); it != automod_rules.end()) {
+        automod_rules.erase(it);
+    }
 }
 
-void automod_rules::on_automod_rule_edit(const dpp::automod_rule_update_t &event, const nlohmann::json& config) {
+void automod_rules::on_automod_rule_edit(const dpp::automod_rule_update_t &event, const nlohmann::json& config, std::vector<dpp::automod_rule>& automod_rules) {
     dpp::embed embed = dpp::embed().set_color(0x00A0A0).set_title("Automod Rule Edited")
-                                   .add_field("Rule Name", event.updated.name, true);
+                                   .add_field("Rule Name", event.updated.name, false);
     // Find rule in cache
-    auto old_rule = util::AUTOMOD_RULE_CACHE.begin();
-    while (old_rule != util::AUTOMOD_RULE_CACHE.end() && old_rule->id != event.updated.id) ++old_rule;
+    auto old_rule = automod_rules.begin();
+    while (old_rule != automod_rules.end() && old_rule->id != event.updated.id) ++old_rule;
     // If rule cannot be found, add edited version to cache and exit
-    if (old_rule == util::AUTOMOD_RULE_CACHE.end()) {
-        util::AUTOMOD_RULE_CACHE.push(event.updated);
+    if (old_rule == automod_rules.end()) {
+        automod_rules.push_back(event.updated);
         embed.set_footer(dpp::embed_footer().set_text("Limited info available (old rule not in cache)"));
         event.owner->message_create(dpp::message(config["log_channel_ids"]["discord_updates"], embed));
         return;
@@ -403,8 +407,8 @@ void automod_rules::on_automod_rule_edit(const dpp::automod_rule_update_t &event
     if (new_actions != old_actions) {
         old_actions.pop_back();
         new_actions.pop_back();
-        embed.add_field("Old list of actions to take", old_actions, false);
-        embed.add_field("New list of actions to take", new_actions, false);
+        embed.add_field("Old list of actions to take", old_actions, true);
+        embed.add_field("New list of actions to take", new_actions, true);
     }
 
     if (event.updated.enabled != old_rule->enabled) {

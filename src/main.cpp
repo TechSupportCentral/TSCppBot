@@ -16,6 +16,8 @@
 #include "command_modules/moderation.h"
 #include "command_modules/server_info.h"
 #include "command_modules/db_commands.h"
+#include "listeners/guild.h"
+#include "listeners/members.h"
 #include "listeners/messages.h"
 #include "listeners/automod_rules.h"
 #include "util.h"
@@ -266,15 +268,18 @@ int main(int argc, char* argv[]) {
         else if (event.custom_id.substr(0, 15) == "edit_field_form") db_commands::edit_embed_command_field(event, db_embed_commands, db);
     });
 
+    // Caches for listeners
+    std::vector<dpp::automod_rule> automod_rules;
+    std::vector<dpp::invite> invites;
     // Listeners
-    bot.on_automod_rule_create([&config](const dpp::automod_rule_create_t &event) -> dpp::task<> {
-        co_await automod_rules::on_automod_rule_add(event, config);
+    bot.on_automod_rule_create([&config, &automod_rules](const dpp::automod_rule_create_t &event) -> dpp::task<> {
+        co_await automod_rules::on_automod_rule_add(event, config, automod_rules);
     });
-    bot.on_automod_rule_delete([&config](const dpp::automod_rule_delete_t &event) {
-        automod_rules::on_automod_rule_remove(event, config);
+    bot.on_automod_rule_delete([&config, &automod_rules](const dpp::automod_rule_delete_t &event) {
+        automod_rules::on_automod_rule_remove(event, config, automod_rules);
     });
-    bot.on_automod_rule_update([&config](const dpp::automod_rule_update_t &event) {
-        automod_rules::on_automod_rule_edit(event, config);
+    bot.on_automod_rule_update([&config, &automod_rules](const dpp::automod_rule_update_t &event) {
+        automod_rules::on_automod_rule_edit(event, config, automod_rules);
     });
     bot.on_message_create([&config](const dpp::message_create_t &event) {
         messages::on_message(event, config);
@@ -291,9 +296,36 @@ int main(int argc, char* argv[]) {
     bot.on_message_reaction_remove([&config](const dpp::message_reaction_remove_t &event) -> dpp::task<> {
         co_await messages::on_reaction_removed(event, config);
     });
+    bot.on_guild_audit_log_entry_create([&config](const dpp::guild_audit_log_entry_create_t &event) -> dpp::task<> {
+        if (event.entry.user_id == event.owner->me.id) {
+            co_return;
+        }
+        switch (event.entry.type) {
+            case dpp::aut_member_ban_add:
+                co_await members::on_ban(event, config);
+                break;
+            case dpp::aut_member_ban_remove:
+                co_await members::on_unban(event, config);
+                break;
+            default:
+                break;
+        }
+    });
+    bot.on_guild_member_add([&config, &invites](const dpp::guild_member_add_t &event) -> dpp::task<> {
+        co_await members::on_join(event, config, invites);
+    });
+    bot.on_guild_member_remove([&config](const dpp::guild_member_remove_t &event) {
+        members::on_leave(event, config);
+    });
+    bot.on_invite_create([&config, &invites](const dpp::invite_create_t &event) {
+        guild::on_invite_created(event, config, invites);
+    });
+    bot.on_invite_delete([&config, &invites](const dpp::invite_delete_t &event) {
+        guild::on_invite_deleted(event, config, invites);
+    });
 
     // TODO: Autodetect bump timer on bot restart?
-    bot.on_ready([&config, &commands, &db, &db_text_commands, &db_embed_commands](const dpp::ready_t &event) -> dpp::task<> {
+    bot.on_ready([&config, &commands, &db, &db_text_commands, &db_embed_commands, &automod_rules, &invites](const dpp::ready_t &event) -> dpp::task<> {
         if (dpp::run_once<struct register_bot_commands>()) {
             std::vector<dpp::slashcommand> global_commands;
             std::vector<dpp::slashcommand> tsc_commands;
@@ -469,7 +501,14 @@ int main(int argc, char* argv[]) {
         dpp::confirmation_callback_t rule_conf = co_await event.owner->co_automod_rules_get(config["guild_id"]);
         if (!rule_conf.is_error()) {
             for (const dpp::automod_rule& rule : std::get<dpp::automod_rule_map>(rule_conf.value) | std::views::values) {
-                util::AUTOMOD_RULE_CACHE.push(rule);
+                automod_rules.push_back(rule);
+            }
+        }
+        // Add all invites to cache
+        dpp::confirmation_callback_t invite_conf = co_await event.owner->co_guild_get_invites(config["guild_id"]);
+        if (!invite_conf.is_error()) {
+            for (const dpp::invite& invite : std::get<dpp::invite_map>(invite_conf.value) | std::views::values) {
+                invites.push_back(invite);
             }
         }
     });
