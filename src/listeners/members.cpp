@@ -144,6 +144,20 @@ void members::on_leave(const dpp::guild_member_remove_t& event, const nlohmann::
     event.owner->message_create(dpp::message(config["log_channel_ids"]["member_log"], embed));
 }
 
+dpp::task<> members::on_sus_join(const dpp::guild_join_request_delete_t& event, const nlohmann::json& config) {
+    dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(event.user_id);
+    if (!user_conf.is_error()) {
+        dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
+        dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("User attempted to join but failed CAPTCHA")
+                                       .set_thumbnail(user.get_avatar_url())
+                                       .set_description(user.username)
+                                       .add_field("User ID", event.user_id.str(), false)
+                                       .add_field("Account Created:", std::format("<t:{}>",
+                                                  static_cast<time_t>(event.user_id.get_creation_time())), false);
+        event.owner->message_create(dpp::message(config["log_channel_ids"]["filter_log"], embed));
+    }
+}
+
 dpp::task<> members::on_member_edit(const dpp::guild_audit_log_entry_create_t& event, const nlohmann::json& config) {
     dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(event.entry.target_id);
     if (!user_conf.is_error()) {

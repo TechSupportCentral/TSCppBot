@@ -30,6 +30,7 @@ namespace members {
     dpp::task<> on_unban(const dpp::guild_audit_log_entry_create_t& event, const nlohmann::json& config);
     dpp::task<> on_join(const dpp::guild_member_add_t& event, const nlohmann::json& config, std::vector<dpp::invite>& invites);
     void on_leave(const dpp::guild_member_remove_t& event, const nlohmann::json& config);
+    dpp::task<> on_sus_join(const dpp::guild_join_request_delete_t& event, const nlohmann::json& config);
     dpp::task<> on_member_edit(const dpp::guild_audit_log_entry_create_t& event, const nlohmann::json& config);
     dpp::task<> on_roles_change(const dpp::guild_audit_log_entry_create_t& event, const nlohmann::json& config);
 }

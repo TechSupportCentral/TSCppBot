@@ -139,6 +139,7 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
     event.edit_original_response(dpp::message(std::format("Command `{}` added successfully.", command_name)));
 }
 
+// TODO interactive UI for adding embed commands
 dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, const nlohmann::json &config, std::unordered_map<std::string, embed_command> &embed_commands, sqlite3 *db) {
     // Send "thinking" response to allow time for DB operation
     dpp::async thinking = event.co_thinking(true);

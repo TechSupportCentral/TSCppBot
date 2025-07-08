@@ -301,6 +301,9 @@ int main(int argc, char* argv[]) {
             co_return;
         }
         switch (event.entry.type) {
+            case dpp::aut_member_kick:
+                co_await members::on_kick(event, config);
+                break;
             case dpp::aut_member_ban_add:
                 co_await members::on_ban(event, config);
                 break;
@@ -316,6 +319,9 @@ int main(int argc, char* argv[]) {
             default:
                 break;
         }
+    });
+    bot.on_guild_join_request_delete([&config](const dpp::guild_join_request_delete_t &event) -> dpp::task<> {
+        co_await members::on_sus_join(event, config);
     });
     bot.on_guild_member_add([&config, &invites](const dpp::guild_member_add_t &event) -> dpp::task<> {
         co_await members::on_join(event, config, invites);
