@@ -307,6 +307,12 @@ int main(int argc, char* argv[]) {
             case dpp::aut_member_ban_remove:
                 co_await members::on_unban(event, config);
                 break;
+            case dpp::aut_member_update:
+                co_await members::on_member_edit(event, config);
+                break;
+            case dpp::aut_member_role_update:
+                co_await members::on_roles_change(event, config);
+                break;
             default:
                 break;
         }

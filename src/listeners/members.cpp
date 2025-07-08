@@ -25,11 +25,11 @@ dpp::task<dpp::invite> members::findinvite(dpp::cluster* bot, const dpp::snowfla
         co_return invite_used;
     }
     // Look for any invite with more uses than the cache has
-    for (size_t i = 0; i < invites.size(); i++) {
+    for (dpp::invite& cached_invite : invites) {
         for (const dpp::invite& invite : std::get<dpp::invite_map>(invites_conf.value) | std::views::values) {
-            if (invite.code == invites[i].code && invite.uses > invites[i].uses) {
+            if (invite.code == cached_invite.code && invite.uses > cached_invite.uses) {
                 // Update invite in cache
-                invites[i] = invite;
+                cached_invite = invite;
 
                 invite_used = invite;
                 co_return invite_used;
@@ -142,4 +142,106 @@ void members::on_leave(const dpp::guild_member_remove_t& event, const nlohmann::
                                    .set_description(event.removed.username + " has left Tech Support Central.")
                                    .set_footer(dpp::embed_footer().set_text(std::string("User ID: ") + event.removed.id.str()));
     event.owner->message_create(dpp::message(config["log_channel_ids"]["member_log"], embed));
+}
+
+dpp::task<> members::on_member_edit(const dpp::guild_audit_log_entry_create_t& event, const nlohmann::json& config) {
+    dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(event.entry.target_id);
+    if (!user_conf.is_error()) {
+        dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
+        for (const dpp::audit_change& change : event.entry.changes) {
+            dpp::embed embed;
+            dpp::snowflake channel = 0;
+            if (change.key == "nick") {
+                embed.set_author(dpp::embed_author(user.username, "", user.get_avatar_url()));
+                dpp::confirmation_callback_t mod_conf = co_await event.owner->co_user_get_cached(event.entry.user_id);
+                if (!mod_conf.is_error()) {
+                    dpp::user_identified mod = std::get<dpp::user_identified>(mod_conf.value);
+                    embed.set_thumbnail(mod.get_avatar_url());
+                    embed.add_field("Named by", mod.global_name, false);
+                }
+                if (change.old_value.empty()) {
+                    embed.set_color(dpp::colors::green).set_title("Nickname Added");
+                } else {
+                    embed.set_color(0x00A0A0).set_title("Nickname Changed");
+                    // Remove quotation marks at beginning and end
+                    embed.add_field("Old Nickname", change.old_value.substr(1, change.old_value.size() - 2), true);
+                }
+                if (change.new_value.empty()) {
+                    embed.set_color(dpp::colors::red).set_title("Nickname Removed");
+                } else {
+                    // Remove quotation marks at beginning and end
+                    embed.add_field("New Nickname", change.new_value.substr(1, change.new_value.size() - 2), true);
+                }
+                embed.set_footer(dpp::embed_footer().set_text(std::string("User ID: ") + user.id.str()));
+                channel = config["log_channel_ids"]["name_changed"];
+            } // other attributes can be added in the future
+            if (channel != 0) {
+                event.owner->message_create(dpp::message(channel, embed));
+            }
+        }
+    }
+}
+
+dpp::task<> members::on_roles_change(const dpp::guild_audit_log_entry_create_t& event, const nlohmann::json& config) {
+    dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(event.entry.target_id);
+    if (!user_conf.is_error()) {
+        dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
+        for (const dpp::audit_change& change : event.entry.changes) {
+            std::vector<dpp::snowflake> roles;
+            if (!change.new_value.empty()) {
+                for (const auto& role : nlohmann::json::parse(change.new_value)) {
+                    roles.emplace_back(role["id"].get<std::string>());
+                    // Don't log new members getting their OG role on join
+                    if (roles.back() == config["role_ids"]["og"].get<dpp::snowflake>()) {
+                        co_return;
+                    }
+                    // New staff member log
+                    if (change.key == "$add") {
+                        if (roles.back() == config["role_ids"]["moderator"].get<dpp::snowflake>()) {
+                            dpp::embed welcome_embed = dpp::embed().set_color(0xF1C40F).set_title("New Moderator")
+                                .set_thumbnail(user.get_avatar_url())
+                                .set_description(std::format("Congratulate {} on the promotion from trial mod!", user.get_mention()));
+                            event.owner->message_create(dpp::message(config["log_channel_ids"]["new_staff_members"], welcome_embed));
+                        }
+                        else if (roles.back() == config["role_ids"]["trial_mod"].get<dpp::snowflake>()) {
+                            dpp::embed welcome_embed = dpp::embed().set_color(0x3498DB).set_title("New Trial Moderator")
+                                .set_thumbnail(user.get_avatar_url())
+                                .set_description(std::format("Welcome {} to the moderation team!", user.get_mention()));
+                            event.owner->message_create(dpp::message(config["log_channel_ids"]["new_staff_members"], welcome_embed));
+                        }
+                        else if (roles.back() == config["role_ids"]["support_team"].get<dpp::snowflake>()) {
+                            dpp::embed welcome_embed = dpp::embed().set_color(0x4DF352).set_title("New Support Team Member")
+                                .set_thumbnail(user.get_avatar_url())
+                                .set_description(std::format("Welcome {} to the support team!", user.get_mention()));
+                            event.owner->message_create(dpp::message(config["log_channel_ids"]["new_staff_members"], welcome_embed));
+                        }
+                    }
+                }
+            }
+
+            dpp::embed embed = dpp::embed().set_author(dpp::embed_author(user.global_name, "", user.get_avatar_url()));
+            if (change.key == "$add") {
+                embed.set_color(dpp::colors::green).set_title("Role Added");
+            } else if (change.key == "$remove") {
+                embed.set_color(dpp::colors::red).set_title("Role Removed");
+            }
+
+            std::string description;
+            for (dpp::snowflake role : roles) {
+                description += "<@&";
+                description += role.str();
+                description += ">\n";
+            }
+            embed.set_description(description);
+
+            dpp::confirmation_callback_t mod_conf = co_await event.owner->co_user_get_cached(event.entry.user_id);
+            if (!mod_conf.is_error()) {
+                dpp::user_identified mod = std::get<dpp::user_identified>(mod_conf.value);
+                embed.set_thumbnail(mod.get_avatar_url()).add_field("By", mod.global_name, false);
+            }
+            embed.set_footer(dpp::embed_footer().set_text(std::string("User ID: ") + user.id.str()));
+
+            event.owner->message_create(dpp::message(config["log_channel_ids"]["role_changed"], embed));
+        }
+    }
 }
