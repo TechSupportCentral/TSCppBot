@@ -64,7 +64,7 @@ dpp::task<> moderation::purge(const dpp::slashcommand_t &event, const nlohmann::
         co_return;
     }
     // Log this action
-    dpp::embed embed = dpp::embed().set_color(0x00A0A0)
+    dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT)
                                       .set_title(std::to_string(limit) + " Messages Deleted")
                                       .set_thumbnail(event.command.member.get_avatar_url())
                                       .add_field("Deleted by", event.command.member.get_nickname(), true)
@@ -87,7 +87,7 @@ void moderation::userinfo(const dpp::slashcommand_t &event, const nlohmann::json
     } catch (const std::bad_variant_access&) {
         user = event.command.get_issuing_user();
     }
-    dpp::embed embed = dpp::embed().set_color(0x00A0A0).set_thumbnail(user.get_avatar_url())
+    dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT).set_thumbnail(user.get_avatar_url())
                                       .set_title(user.username)
                                       .add_field("User ID", user.id.str(), false)
                                       .add_field("Display name", user.global_name, true);
@@ -162,7 +162,7 @@ dpp::task<> moderation::inviteinfo(const dpp::slashcommand_t &event) {
     }
     dpp::invite invite = std::get<dpp::invite>(confirmation.value);
     // Build embed with invite info
-    dpp::embed embed = dpp::embed().set_color(0x00A0A0).set_thumbnail(invite.destination_guild.get_icon_url())
+    dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT).set_thumbnail(invite.destination_guild.get_icon_url())
                                    .set_url("https://discord.gg/" + invite.code)
                                    .set_title("Invite to " + invite.destination_guild.name)
                                    .add_field("Members total", std::to_string(invite.approximate_member_count), true)
@@ -206,7 +206,7 @@ dpp::task<> moderation::warn(const dpp::slashcommand_t &event, const nlohmann::j
     }
 
     // Create warning message and send DM to user
-    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::red).set_title("You have been warned.").add_field("Reason", reason, false);
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::RED).set_title("You have been warned.").add_field("Reason", reason, false);
     dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.user_id, dpp::message(dm_embed));
 
     // Send empty embed to log channel and get the message ID
@@ -222,7 +222,7 @@ dpp::task<> moderation::warn(const dpp::slashcommand_t &event, const nlohmann::j
     }
     dpp::message log_message = std::get<dpp::message>(log_conf.value);
     // Edit the message with warning info
-    log_message.embeds[0].set_color(dpp::colors::red).set_title("Warning").set_thumbnail(user.get_user()->get_avatar_url())
+    log_message.embeds[0].set_color(util::color::RED).set_title("Warning").set_thumbnail(user.get_user()->get_avatar_url())
     .set_description(std::format("Use `/unwarn {} <reason>` to remove this warning. Note: This is not the user's ID, rather the ID of this message.", log_message.id.str()))
     .add_field("User warned", user.get_nickname(), true)
     .add_field("User ID", user.user_id.str(), true)
@@ -305,7 +305,7 @@ dpp::task<> moderation::unwarn(const dpp::slashcommand_t &event, const nlohmann:
         co_return;
     }
     // Create unwarn message and send DM to user
-    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::green).set_title("Your warning has been removed.")
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::GREEN).set_title("Your warning has been removed.")
                                       .add_field("Original warning reason", original_reason, false)
                                       .add_field("Reason for removal", reason, false);
     dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user_id, dpp::message(dm_embed));
@@ -319,7 +319,7 @@ dpp::task<> moderation::unwarn(const dpp::slashcommand_t &event, const nlohmann:
     }
     dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
     // Create and send log message
-    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_thumbnail(user.get_avatar_url())
+    dpp::embed log_embed = dpp::embed().set_color(util::color::GREEN).set_thumbnail(user.get_avatar_url())
     .set_title("Warning Removed")
     .add_field("User warned", user.username, true)
     .add_field("User ID", user_id.str(), true)
@@ -385,7 +385,7 @@ dpp::task<> moderation::mute(const dpp::slashcommand_t &event, const nlohmann::j
     util::mute mute = {0, user.user_id, now, now + seconds};
 
     // Create mute message and send DM to user
-    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::red)
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::RED)
                                       .set_title(std::format("You have been muted for {}.", fancytime))
                                       .add_field("Reason", reason, false);
     dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(mute.user, dpp::message(dm_embed));
@@ -404,7 +404,7 @@ dpp::task<> moderation::mute(const dpp::slashcommand_t &event, const nlohmann::j
     }
     dpp::message log_message = std::get<dpp::message>(log_conf.value);
     // Edit the message with mute info
-    log_message.embeds[0].set_color(dpp::colors::red).set_thumbnail(user.get_user()->get_avatar_url())
+    log_message.embeds[0].set_color(util::color::RED).set_thumbnail(user.get_user()->get_avatar_url())
     .set_title(std::string("Mute for ") + fancytime)
     .add_field("User muted", user.get_nickname(), true)
     .add_field("User ID", mute.user.str(), true)
@@ -514,11 +514,11 @@ dpp::task<> moderation::unmute(const dpp::slashcommand_t &event, const nlohmann:
     }
 
     // Create unmute message and send DM to user
-    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::green).set_title("You have been unmuted.")
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::GREEN).set_title("You have been unmuted.")
                                       .add_field("Reason", reason, false);
     dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.user_id, dpp::message(dm_embed));
     // Create and send log message
-    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_thumbnail(user.get_user()->get_avatar_url())
+    dpp::embed log_embed = dpp::embed().set_color(util::color::GREEN).set_thumbnail(user.get_user()->get_avatar_url())
     .set_title("Mute Removed")
     .add_field("User unmuted", user.get_nickname(), true)
     .add_field("User ID", user.user_id.str(), true)
@@ -562,7 +562,7 @@ dpp::task<> moderation::kick(const dpp::slashcommand_t &event, const nlohmann::j
     }
 
     // Create kick message and send DM to user
-    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::red).set_title("You have been kicked.").add_field("Reason", reason, false);
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::RED).set_title("You have been kicked.").add_field("Reason", reason, false);
     dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.id, dpp::message(dm_embed));
     // Kick user
     dpp::confirmation_callback_t kick_conf = co_await event.owner->co_guild_member_kick(config["guild_id"], user.id);
@@ -590,7 +590,7 @@ dpp::task<> moderation::kick(const dpp::slashcommand_t &event, const nlohmann::j
     }
     dpp::message log_message = std::get<dpp::message>(log_conf.value);
     // Edit the message with kick info
-    log_message.embeds[0].set_color(dpp::colors::red).set_title("Kick").set_thumbnail(user.get_avatar_url())
+    log_message.embeds[0].set_color(util::color::RED).set_title("Kick").set_thumbnail(user.get_avatar_url())
     .add_field("User kicked", user.username, true)
     .add_field("User ID", user.id.str(), true)
     .add_field("Kicked by", event.command.get_issuing_user().global_name, false)
@@ -651,7 +651,7 @@ dpp::task<> moderation::ban(const dpp::slashcommand_t &event, const nlohmann::js
     }
 
     // Create ban message and send DM to user
-    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::red).set_title("You have been banned.").add_field("Reason", reason, false);
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::RED).set_title("You have been banned.").add_field("Reason", reason, false);
     dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.id, dpp::message(dm_embed));
     // Ban user
     dpp::confirmation_callback_t ban_conf = co_await event.owner->co_guild_ban_add(config["guild_id"], user.id, seconds);
@@ -679,7 +679,7 @@ dpp::task<> moderation::ban(const dpp::slashcommand_t &event, const nlohmann::js
     }
     dpp::message log_message = std::get<dpp::message>(log_conf.value);
     // Edit the message with ban info
-    log_message.embeds[0].set_color(dpp::colors::red).set_title("Ban").set_thumbnail(user.get_avatar_url())
+    log_message.embeds[0].set_color(util::color::RED).set_title("Ban").set_thumbnail(user.get_avatar_url())
     .add_field("User banned", user.username, true)
     .add_field("User ID", user.id.str(), true)
     .add_field("Banned by", event.command.get_issuing_user().global_name, false)
@@ -768,11 +768,11 @@ dpp::task<> moderation::unban(const dpp::slashcommand_t &event, const nlohmann::
     }
 
     // Create unban message and send DM to user
-    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::green).set_title("Your ban has been removed.")
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::GREEN).set_title("Your ban has been removed.")
                                       .add_field("Reason", reason, false);
     dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.id, dpp::message(dm_embed));
     // Create and send log message
-    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_thumbnail(user.get_avatar_url())
+    dpp::embed log_embed = dpp::embed().set_color(util::color::GREEN).set_thumbnail(user.get_avatar_url())
     .set_title("Ban Removed")
     .add_field("User unbanned", user.global_name, true)
     .add_field("User ID", user.id.str(), true)
@@ -854,10 +854,10 @@ void moderation::get_mod_actions(const dpp::slashcommand_t &event, const nlohman
     // Print actions in groups of 4 because embeds can only have up to 25 fields
     std::vector<dpp::embed> embeds((actions.size() + 3) / 4);
     // Initialize embeds
-    embeds[0] = dpp::embed().set_color(0x00A0A0).set_thumbnail(user.get_avatar_url())
+    embeds[0] = dpp::embed().set_color(util::color::DEFAULT).set_thumbnail(user.get_avatar_url())
                             .set_title(std::string("Moderation actions against ") + user.username);
     for (size_t i = 1; i < embeds.size(); i++) {
-        embeds[i] = dpp::embed().set_color(0x00A0A0).set_title(user.username + "'s warnings continued");
+        embeds[i] = dpp::embed().set_color(util::color::DEFAULT).set_title(user.username + "'s warnings continued");
     }
     // Add fields for each action attribute
     for (size_t i = 0; i < actions.size(); i++) {

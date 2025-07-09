@@ -49,7 +49,7 @@ void messages::on_message(const dpp::message_create_t& event, const nlohmann::js
         return;
     }
     if (event.msg.is_dm()) {
-        dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_thumbnail(event.msg.author.get_avatar_url())
+        dpp::embed embed = dpp::embed().set_color(util::color::RED).set_thumbnail(event.msg.author.get_avatar_url())
                                        .set_title("DM Received").add_field("From", event.msg.author.username, true)
                                        .add_field("User ID", event.msg.author.id.str(), true);
         add_message_content_fields(embed, event.msg);
@@ -59,7 +59,7 @@ void messages::on_message(const dpp::message_create_t& event, const nlohmann::js
     } else if (event.msg.author.id == 760604690010079282  && event.msg.embeds.size() == 1) {
         if (event.msg.embeds[0].description.find(dpp::unicode_emoji::thumbsup) != std::string::npos) {
             event.owner->message_create(dpp::message(event.msg.channel_id, dpp::embed()
-                .set_color(0x00A0A0).set_title("Thank you for bumping the server!")
+                .set_color(util::color::DEFAULT).set_title("Thank you for bumping the server!")
                 .set_description("Vote for Tech Support Central on top.gg at https://top.gg/servers/824042976371277884")));
             if (!util::BUMP_TIMER_RUNNING) {
                 util::BUMP_TIMER_RUNNING = true;
@@ -87,7 +87,7 @@ void messages::on_message(const dpp::message_create_t& event, const nlohmann::js
 
 dpp::task<> messages::on_message_deleted(const dpp::message_delete_t& event, const nlohmann::json& config) {
     dpp::confirmation_callback_t msg_conf = co_await util::get_message_cached(event.owner, event.id, event.channel_id);
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Message Deleted")
+    dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Message Deleted")
                                    .add_field("In channel", std::format("<#{}>", event.channel_id.str()), false);
     if (msg_conf.is_error()) {
         embed.add_field("Sent on", std::format("<t:{}>", static_cast<time_t>(event.id.get_creation_time())), false);
@@ -128,7 +128,7 @@ dpp::task<> messages::on_message_edited(const dpp::message_update_t& event, cons
         }
     }
 
-    dpp::embed embed = dpp::embed().set_color(0x00A0A0).set_title("Message Edited").set_thumbnail(event.msg.author.get_avatar_url())
+    dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT).set_title("Message Edited").set_thumbnail(event.msg.author.get_avatar_url())
                                    .add_field("In channel", std::format("<#{}>\n[Jump to Message]({})",
                                               event.msg.channel_id.str(), event.msg.get_url()), false)
                                    .add_field("Sent by", event.msg.author.global_name, true)

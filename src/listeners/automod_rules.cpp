@@ -140,7 +140,7 @@ dpp::task<> automod_rules::on_automod_rule_add(const dpp::automod_rule_create_t 
         user = std::get<dpp::user_identified>(user_conf.value);
     }
 
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::green).set_thumbnail(user.get_avatar_url())
+    dpp::embed embed = dpp::embed().set_color(util::color::GREEN).set_thumbnail(user.get_avatar_url())
                                    .set_title(std::string("New Automod Rule: ") + event.created.name)
                                    .add_field("Created by", user.username, false);
     add_rule_description_fields(embed, event.created);
@@ -148,7 +148,7 @@ dpp::task<> automod_rules::on_automod_rule_add(const dpp::automod_rule_create_t 
 }
 
 void automod_rules::on_automod_rule_remove(const dpp::automod_rule_delete_t &event, const nlohmann::json& config, std::vector<dpp::automod_rule>& automod_rules) {
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Automod Rule Deleted")
+    dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Automod Rule Deleted")
                                    .add_field("Rule Name", event.deleted.name, true);
     add_rule_description_fields(embed, event.deleted);
     event.owner->message_create(dpp::message(config["log_channel_ids"]["discord_updates"], embed));
@@ -159,7 +159,7 @@ void automod_rules::on_automod_rule_remove(const dpp::automod_rule_delete_t &eve
 }
 
 void automod_rules::on_automod_rule_edit(const dpp::automod_rule_update_t &event, const nlohmann::json& config, std::vector<dpp::automod_rule>& automod_rules) {
-    dpp::embed embed = dpp::embed().set_color(0x00A0A0).set_title("Automod Rule Edited")
+    dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT).set_title("Automod Rule Edited")
                                    .add_field("Rule Name", event.updated.name, false);
     // Find rule in cache
     auto old_rule = automod_rules.begin();
@@ -413,9 +413,9 @@ void automod_rules::on_automod_rule_edit(const dpp::automod_rule_update_t &event
 
     if (event.updated.enabled != old_rule->enabled) {
         if (event.updated.enabled) {
-            embed.set_color(dpp::colors::green).set_title("Automod Rule Enabled");
+            embed.set_color(util::color::GREEN).set_title("Automod Rule Enabled");
         } else {
-            embed.set_color(dpp::colors::red).set_title("Automod Rule Disabled");
+            embed.set_color(util::color::RED).set_title("Automod Rule Disabled");
         }
     }
 

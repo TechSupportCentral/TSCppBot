@@ -16,7 +16,7 @@
 #include "../util.h"
 
 void server_info::rules(const dpp::slashcommand_t &event, const nlohmann::json &config) {
-    dpp::embed embed = dpp::embed().set_color(0x00A0A0).set_title("Server Rules");
+    dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT).set_title("Server Rules");
 
     for (size_t i = 0; i < config["rules"].size(); i++) {
         embed.add_field(std::format("Rule {}:", i + 1), config["rules"][i].get<std::string>());
@@ -32,7 +32,7 @@ void server_info::rule(const dpp::slashcommand_t &event, const nlohmann::json &c
         return;
     }
 
-    dpp::embed embed = dpp::embed().set_color(0x00A0A0)
+    dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT)
                                    .set_title(std::string("Rule ") + std::to_string(rule))
                                    .set_description(config["rules"][rule - 1].get<std::string>());
     event.reply(dpp::message(event.command.channel_id, embed));
@@ -70,10 +70,10 @@ dpp::task<> server_info::suggestion_response(const dpp::slashcommand_t &event, c
     }
 
     if (std::get<bool>(event.get_parameter("accept"))) {
-        message.embeds[0].set_color(dpp::colors::green);
+        message.embeds[0].set_color(util::color::GREEN);
         message.embeds[0].fields[0].name = "Status: Accepted";
     } else {
-        message.embeds[0].set_color(dpp::colors::red);
+        message.embeds[0].set_color(util::color::RED);
         message.embeds[0].fields[0].name = "Status: Declined";
     }
     message.embeds[0].fields[0].value = std::get<std::string>(event.get_parameter("response"));

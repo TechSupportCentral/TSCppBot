@@ -43,7 +43,7 @@ dpp::task<> members::on_kick(const dpp::guild_audit_log_entry_create_t& event, c
     dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(event.entry.target_id);
     dpp::confirmation_callback_t mod_conf = co_await event.owner->co_user_get_cached(event.entry.user_id);
 
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Manual Kick");
+    dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Manual Kick");
     if (!user_conf.is_error()) {
         dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
         embed.set_thumbnail(user.get_avatar_url()).add_field("User kicked", user.username, true);
@@ -67,7 +67,7 @@ dpp::task<> members::on_ban(const dpp::guild_audit_log_entry_create_t& event, co
     dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(event.entry.target_id);
     dpp::confirmation_callback_t mod_conf = co_await event.owner->co_user_get_cached(event.entry.user_id);
 
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Manual Ban");
+    dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Manual Ban");
     if (!user_conf.is_error()) {
         dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
         embed.set_thumbnail(user.get_avatar_url()).add_field("User banned", user.username, true);
@@ -91,7 +91,7 @@ dpp::task<> members::on_unban(const dpp::guild_audit_log_entry_create_t& event, 
     dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(event.entry.target_id);
     dpp::confirmation_callback_t mod_conf = co_await event.owner->co_user_get_cached(event.entry.user_id);
 
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::green).set_title("Ban Manually Removed");
+    dpp::embed embed = dpp::embed().set_color(util::color::GREEN).set_title("Ban Manually Removed");
     if (!user_conf.is_error()) {
         dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
         embed.set_thumbnail(user.get_avatar_url()).add_field("User unbanned", user.username, true);
@@ -112,12 +112,12 @@ dpp::task<> members::on_unban(const dpp::guild_audit_log_entry_create_t& event, 
 }
 
 dpp::task<> members::on_join(const dpp::guild_member_add_t& event, const nlohmann::json& config, std::vector<dpp::invite>& invites) {
-    dpp::embed welcome_embed = dpp::embed().set_color(dpp::colors::green).set_title("New Member")
+    dpp::embed welcome_embed = dpp::embed().set_color(util::color::GREEN).set_title("New Member")
                                            .set_thumbnail(event.added.get_user()->get_avatar_url())
                                            .set_description(event.added.get_user()->global_name + " has joined Tech Support Central!");
     event.owner->message_create(dpp::message(config["log_channel_ids"]["welcome"], welcome_embed));
 
-    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_title("Member Joined")
+    dpp::embed log_embed = dpp::embed().set_color(util::color::GREEN).set_title("Member Joined")
                                        .set_thumbnail(event.added.get_user()->get_avatar_url())
                                        .set_description(event.added.get_user()->username)
                                        .add_field("User ID", event.added.user_id.str(), false)
@@ -137,7 +137,7 @@ dpp::task<> members::on_join(const dpp::guild_member_add_t& event, const nlohman
 }
 
 void members::on_leave(const dpp::guild_member_remove_t& event, const nlohmann::json& config) {
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Member Left")
+    dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Member Left")
                                    .set_thumbnail(event.removed.get_avatar_url())
                                    .set_description(event.removed.username + " has left Tech Support Central.")
                                    .set_footer(dpp::embed_footer().set_text(std::string("User ID: ") + event.removed.id.str()));
@@ -148,7 +148,7 @@ dpp::task<> members::on_sus_join(const dpp::guild_join_request_delete_t& event, 
     dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(event.user_id);
     if (!user_conf.is_error()) {
         dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
-        dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("User attempted to join but failed CAPTCHA")
+        dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("User attempted to join but failed CAPTCHA")
                                        .set_thumbnail(user.get_avatar_url())
                                        .set_description(user.username)
                                        .add_field("User ID", event.user_id.str(), false)
@@ -174,14 +174,14 @@ dpp::task<> members::on_member_edit(const dpp::guild_audit_log_entry_create_t& e
                     embed.add_field("Named by", mod.global_name, false);
                 }
                 if (change.old_value.empty()) {
-                    embed.set_color(dpp::colors::green).set_title("Nickname Added");
+                    embed.set_color(util::color::GREEN).set_title("Nickname Added");
                 } else {
-                    embed.set_color(0x00A0A0).set_title("Nickname Changed");
+                    embed.set_color(util::color::DEFAULT).set_title("Nickname Changed");
                     // Remove quotation marks at beginning and end
                     embed.add_field("Old Nickname", change.old_value.substr(1, change.old_value.size() - 2), true);
                 }
                 if (change.new_value.empty()) {
-                    embed.set_color(dpp::colors::red).set_title("Nickname Removed");
+                    embed.set_color(util::color::RED).set_title("Nickname Removed");
                 } else {
                     // Remove quotation marks at beginning and end
                     embed.add_field("New Nickname", change.new_value.substr(1, change.new_value.size() - 2), true);
@@ -212,19 +212,19 @@ dpp::task<> members::on_roles_change(const dpp::guild_audit_log_entry_create_t& 
                     // New staff member log
                     if (change.key == "$add") {
                         if (roles.back() == config["role_ids"]["moderator"].get<dpp::snowflake>()) {
-                            dpp::embed welcome_embed = dpp::embed().set_color(0xF1C40F).set_title("New Moderator")
+                            dpp::embed welcome_embed = dpp::embed().set_color(util::color::MODERATOR_ROLE_COLOR).set_title("New Moderator")
                                 .set_thumbnail(user.get_avatar_url())
                                 .set_description(std::format("Congratulate {} on the promotion from trial mod!", user.get_mention()));
                             event.owner->message_create(dpp::message(config["log_channel_ids"]["new_staff_members"], welcome_embed));
                         }
                         else if (roles.back() == config["role_ids"]["trial_mod"].get<dpp::snowflake>()) {
-                            dpp::embed welcome_embed = dpp::embed().set_color(0x3498DB).set_title("New Trial Moderator")
+                            dpp::embed welcome_embed = dpp::embed().set_color(util::color::TRIAL_MOD_ROLE_COLOR).set_title("New Trial Moderator")
                                 .set_thumbnail(user.get_avatar_url())
                                 .set_description(std::format("Welcome {} to the moderation team!", user.get_mention()));
                             event.owner->message_create(dpp::message(config["log_channel_ids"]["new_staff_members"], welcome_embed));
                         }
                         else if (roles.back() == config["role_ids"]["support_team"].get<dpp::snowflake>()) {
-                            dpp::embed welcome_embed = dpp::embed().set_color(0x4DF352).set_title("New Support Team Member")
+                            dpp::embed welcome_embed = dpp::embed().set_color(util::color::SUPPORT_TEAM_ROLE_COLOR).set_title("New Support Team Member")
                                 .set_thumbnail(user.get_avatar_url())
                                 .set_description(std::format("Welcome {} to the support team!", user.get_mention()));
                             event.owner->message_create(dpp::message(config["log_channel_ids"]["new_staff_members"], welcome_embed));
@@ -235,9 +235,9 @@ dpp::task<> members::on_roles_change(const dpp::guild_audit_log_entry_create_t& 
 
             dpp::embed embed = dpp::embed().set_author(dpp::embed_author(user.global_name, "", user.get_avatar_url()));
             if (change.key == "$add") {
-                embed.set_color(dpp::colors::green).set_title("Role Added");
+                embed.set_color(util::color::GREEN).set_title("Role Added");
             } else if (change.key == "$remove") {
-                embed.set_color(dpp::colors::red).set_title("Role Removed");
+                embed.set_color(util::color::RED).set_title("Role Removed");
             }
 
             std::string description;

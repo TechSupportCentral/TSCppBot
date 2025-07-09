@@ -223,8 +223,8 @@ int main(int argc, char* argv[]) {
         else if (command_name == "ping") meta::ping(event);
         else if (command_name == "uptime") meta::uptime(event);
         else if (command_name == "commit") meta::get_commit(event);
-        else if (command_name == "sendmessage") meta::send_message(event);
-        else if (command_name == "announce") meta::announce(event, config);
+        else if (command_name == "sendmessage") co_await meta::send_message(event);
+        else if (command_name == "announce") co_await meta::announce(event, config);
         else if (command_name == "dm") co_await meta::dm(event, config);
         else if (command_name == "remindme") meta::remindme(event, db);
         else if (command_name == "set-bump-timer") meta::set_bump_timer(event, config);
@@ -465,7 +465,7 @@ int main(int argc, char* argv[]) {
 
         // Resume remaining mutes
         std::vector<util::mute> mute_list;
-        sqlite3_exec(db, "SELECT user, extra_data_id FROM mod_records WHERE type='mute' AND active='true';",
+        sqlite3_exec(db, "SELECT user, extra_data FROM mod_records WHERE type='mute' AND active='true';",
             [](void* mute_list, int column_count, char** column_values, char** column_names) -> int {
                 auto mutes = static_cast<std::vector<util::mute>*>(mute_list);
                 util::mute mute;

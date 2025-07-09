@@ -20,9 +20,9 @@ namespace meta {
     void ping(const dpp::slashcommand_t &event);
     void uptime(const dpp::slashcommand_t &event);
     void get_commit(const dpp::slashcommand_t &event);
-    void send_message(const dpp::slashcommand_t &event);
+    dpp::task<> send_message(const dpp::slashcommand_t &event);
     dpp::task<> dm(const dpp::slashcommand_t &event, const nlohmann::json &config);
-    void announce(const dpp::slashcommand_t &event, const nlohmann::json &config);
+    dpp::task<> announce(const dpp::slashcommand_t &event, const nlohmann::json &config);
     void remindme(const dpp::slashcommand_t &event, sqlite3* db);
     void set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json &config);
 }

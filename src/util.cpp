@@ -233,7 +233,7 @@ dpp::job util::remind(dpp::cluster* bot, sqlite3* db, const reminder reminder) {
     const time_t now = time(nullptr);
     if (reminder.end_time < now) {
         // If reminder end time has already passed, send the user a belated reminder notification
-        dpp::embed embed = dpp::embed().set_title("Belated Reminder").set_color(0x00A0A0)
+        dpp::embed embed = dpp::embed().set_title("Belated Reminder").set_color(util::color::DEFAULT)
         .set_description(std::format("Sorry, the bot was offline when you were supposed to get your reminder of {} from <t:{}>.",
         seconds_to_fancytime(reminder.end_time - reminder.start_time, 4), reminder.start_time))
         .add_field("Reminder", reminder.text);
@@ -253,7 +253,7 @@ dpp::job util::remind(dpp::cluster* bot, sqlite3* db, const reminder reminder) {
     // Send user reminder notification
     dpp::embed embed = dpp::embed().set_title(std::format("Reminder of {} from <t:{}>",
     seconds_to_fancytime(reminder.end_time - reminder.start_time, 4),
-    reminder.start_time)).set_color(0x00A0A0).set_description(reminder.text);
+    reminder.start_time)).set_color(util::color::DEFAULT).set_description(reminder.text);
     bot->direct_message_create(reminder.user, dpp::message(embed));
     // Remove reminder from DB
     char* error_message;
@@ -273,7 +273,7 @@ dpp::job util::handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json&
     // Mark mute as inactive in DB
     if (mute.id != 0) {
         char* error_message;
-        sqlite3_exec(db, std::format("UPDATE mod_records SET active = 'false' WHERE extra_data_id={};", mute.id).c_str(), nullptr, nullptr, &error_message);
+        sqlite3_exec(db, std::format("UPDATE mod_records SET active = 'false' WHERE extra_data={};", mute.id).c_str(), nullptr, nullptr, &error_message);
         if (error_message != nullptr) {
             log("SQL ERROR", error_message);
             sqlite3_free(error_message);
@@ -290,8 +290,8 @@ dpp::job util::handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json&
         co_return;
     }
     // Send user notification and log the unmute action
-    dpp::embed dm_embed = dpp::embed().set_color(dpp::colors::green).set_title("You have been automatically unmuted.");
-    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_title("Mute removed").set_thumbnail(user.get_user()->get_avatar_url())
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::GREEN).set_title("You have been automatically unmuted.");
+    dpp::embed log_embed = dpp::embed().set_color(util::color::GREEN).set_title("Mute removed").set_thumbnail(user.get_user()->get_avatar_url())
                                        .add_field("User unmuted", user.get_nickname(), true)
                                        .add_field("User ID", mute.user.str(), true)
                                        .add_field("Reason", "Automatic unmute", false);

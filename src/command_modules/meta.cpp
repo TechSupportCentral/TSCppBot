@@ -43,33 +43,71 @@ void meta::get_commit(const dpp::slashcommand_t &event) {
     "I am currently running on commit [{}](https://github.com/TechSupportCentral/TSCppBot/commit/{}).", commit_hash, commit_hash)));
 }
 
-void meta::send_message(const dpp::slashcommand_t &event) {
-    event.owner->message_create(dpp::message(event.command.channel_id, std::get<std::string>(event.get_parameter("message"))));
-    event.reply(dpp::message("Message sent").set_flags(dpp::m_ephemeral));
+dpp::task<> meta::send_message(const dpp::slashcommand_t &event) {
+    // Send "thinking" response to allow time for Discord API
+    dpp::async thinking = event.co_thinking(true);
+    // Replace escaped newline "\n" with actual newline character
+    std::string message = std::get<std::string>(event.get_parameter("message"));
+    size_t pos = message.find("\\n");
+    while (pos < message.size() && pos != std::string::npos) {
+        // Don't replace if "\\n" is sent (double escape)
+        if (message[pos - 1] != '\\') {
+            message.replace(pos, 2, "\n");
+        }
+        // Find next occurence, if any
+        pos = message.find("\\n", pos + 1);
+    }
+    // Send message
+    dpp::confirmation_callback_t msg_conf = co_await event.owner->co_message_create(dpp::message(event.command.channel_id, message));
+    co_await thinking;
+    if (msg_conf.is_error()) {
+        event.edit_original_response(dpp::message("Message failed to send."));
+    } else {
+        event.edit_original_response(dpp::message("Message sent"));
+    }
 }
 
-void meta::announce(const dpp::slashcommand_t &event, const nlohmann::json &config) {
-    dpp::embed embed = dpp::embed().set_color(0x00A0A0).
-    set_description(std::get<std::string>(event.get_parameter("message")));
+dpp::task<> meta::announce(const dpp::slashcommand_t &event, const nlohmann::json &config) {
+    // Send "thinking" response to allow time for Discord API
+    dpp::async thinking = event.co_thinking(true);
+    // Replace escaped newline "\\n" with actual newline character
+    std::string message = std::get<std::string>(event.get_parameter("message"));
+    size_t pos = message.find("\\n");
+    while (pos < message.size() && pos != std::string::npos) {
+        // Don't replace if "\\n" is sent (double escape)
+        if (message[pos - 1] != '\\') {
+            message.replace(pos, 2, "\n");
+        }
+        // Find next occurence, if any
+        pos = message.find("\\n", pos + 1);
+    }
+
+    dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT).
+    set_description(message);
     try {
         std::string title = std::get<std::string>(event.get_parameter("title"));
         embed.set_title(title);
     } catch (const std::bad_variant_access&) {
         embed.set_title("Announcement");
     }
-    dpp::message message = dpp::message(event.command.channel_id, embed);
+    dpp::message msg = dpp::message(event.command.channel_id, embed);
     try {
         dpp::snowflake ping_role_id = std::get<dpp::snowflake>(event.get_parameter("ping"));
         if (ping_role_id == config["role_ids"]["everyone"].get<dpp::snowflake>()) {
-            message.set_content("@everyone");
-            message.set_allowed_mentions(true, true, true);
+            msg.set_content("@everyone");
+            msg.set_allowed_mentions(true, true, true);
         } else {
-            message.set_content(event.command.get_resolved_role(ping_role_id).get_mention());
-            message.set_allowed_mentions(true, true);
+            msg.set_content(event.command.get_resolved_role(ping_role_id).get_mention());
+            msg.set_allowed_mentions(true, true);
         }
     } catch (const std::bad_variant_access&) {}
-    event.owner->message_create(message);
-    event.reply(dpp::message("Announcement sent").set_flags(dpp::m_ephemeral));
+    dpp::confirmation_callback_t msg_conf = co_await event.owner->co_message_create(msg);
+    co_await thinking;
+    if (msg_conf.is_error()) {
+        event.edit_original_response(dpp::message("Announcement failed to send."));
+    } else {
+        event.edit_original_response(dpp::message("Announcement sent"));
+    }
 }
 
 dpp::task<> meta::dm(const dpp::slashcommand_t &event, const nlohmann::json &config) {
@@ -78,7 +116,7 @@ dpp::task<> meta::dm(const dpp::slashcommand_t &event, const nlohmann::json &con
     // Get user and message, construct embed, and send DM
     dpp::user user = event.command.get_resolved_user(std::get<dpp::snowflake>(event.get_parameter("user")));
     std::string message = std::get<std::string>(event.get_parameter("message"));
-    dpp::embed dm_embed = dpp::embed().set_color(0x00A0A0).set_title("Message from the owners of TSC").set_description(message);
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::DEFAULT).set_title("Message from the owners of TSC").set_description(message);
     dpp::confirmation_callback_t confirmation = co_await event.owner->co_direct_message_create(user.id, dpp::message(dm_embed));
     if (confirmation.is_error()) {
         co_await thinking;
@@ -86,7 +124,7 @@ dpp::task<> meta::dm(const dpp::slashcommand_t &event, const nlohmann::json &con
         co_return;
     }
     // Let sender know and send a log message
-    dpp::embed log_embed = dpp::embed().set_color(dpp::colors::green).set_title("DM Sent")
+    dpp::embed log_embed = dpp::embed().set_color(util::color::GREEN).set_title("DM Sent")
     .set_thumbnail(user.get_avatar_url()).add_field("Sent to", user.username, true)
     .add_field("User ID", std::to_string(user.id), true)
     .add_field("Sent by", event.command.member.get_nickname(), false)

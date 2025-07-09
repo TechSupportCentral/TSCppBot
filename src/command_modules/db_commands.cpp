@@ -130,13 +130,14 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
         event.owner->guild_command_create(slash_command, config["guild_id"]);
     }
     // Send log
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::green).set_title("Database Command Added")
+    dpp::embed embed = dpp::embed().set_color(util::color::GREEN).set_title("Database Command Added")
     .set_thumbnail(event.command.member.get_avatar_url()).add_field("Added by", event.command.member.get_nickname(), false)
     .add_field("Command name", command_name, true).add_field("Command type", "Text", true);
     event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
     // Send confirmation
     co_await thinking;
-    event.edit_original_response(dpp::message(std::format("Command `{}` added successfully.", command_name)));
+    event.edit_original_response(dpp::message(std::format("Command `{}` added successfully."
+                                              "\nYou may need to restart Discord for it to show up.", command_name)));
 }
 
 // TODO interactive UI for adding embed commands
@@ -277,7 +278,11 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
         footer.set_icon(std::get<std::string>(event.get_parameter("footer_icon_url")));
         sql_row.footer_icon_url = util::sql_escape_string(footer.icon_url, true);
     } catch (const std::bad_variant_access&) {
-        sql_row.footer_icon_url = "NULL";
+        if (sql_row.footer_text == "NULL") {
+            sql_row.footer_icon_url = "NULL";
+        } else {
+            sql_row.footer_icon_url = "";
+        }
     }
     command.embed.set_footer(footer);
 
@@ -310,13 +315,14 @@ dpp::task<> db_commands::add_embed_command(const dpp::slashcommand_t &event, con
         event.owner->guild_command_create(slash_command, config["guild_id"]);
     }
     // Send log
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::green).set_title("Database Command Added")
+    dpp::embed embed = dpp::embed().set_color(util::color::GREEN).set_title("Database Command Added")
     .set_thumbnail(event.command.member.get_avatar_url()).add_field("Added by", event.command.member.get_nickname(), false)
     .add_field("Command name", command_name, true).add_field("Command type", "Embed", true);
     event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
     // Send confirmation
     co_await thinking;
-    event.edit_original_response(dpp::message(std::format("Command `{}` added successfully.", command_name)));
+    event.edit_original_response(dpp::message(std::format("Command `{}` added successfully."
+                                              "\nYou may need to restart Discord for it to show up.", command_name)));
 }
 
 void db_commands::add_embed_command_field_modal(const dpp::slashcommand_t &event, const std::unordered_map<std::string, embed_command> &embed_commands) {
@@ -808,7 +814,7 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
         text_commands.erase(text_command_it);
 
         // Send log
-        dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Database Command Removed")
+        dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Database Command Removed")
         .set_thumbnail(event.command.member.get_avatar_url()).add_field("Removed by", event.command.member.get_nickname(), false)
         .add_field("Command name", command_name, true).add_field("Command type", "Text", true);
         event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
@@ -874,7 +880,7 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
         embed_commands.erase(embed_command_it);
 
         // Send log
-        dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Database Command Removed")
+        dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Database Command Removed")
         .set_thumbnail(event.command.member.get_avatar_url()).add_field("Removed by", event.command.member.get_nickname(), false)
         .add_field("Command name", command_name, true).add_field("Command type", "Embed", true);
         event.owner->message_create(dpp::message(config["log_channel_ids"]["staff_news"], embed));
@@ -890,7 +896,7 @@ dpp::task<> db_commands::remove_command(const dpp::slashcommand_t &event, const 
 
 void db_commands::get_commands(const dpp::slashcommand_t &event, std::unordered_map<std::string, text_command> &text_commands, std::unordered_map<std::string, embed_command> &embed_commands) {
     event.thinking();
-    dpp::embed embed = dpp::embed().set_color(0x00A0A0).set_title("Commands in Database:")
+    dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT).set_title("Commands in Database:")
     .set_footer("Commands not accessible in DM are on the second column", "");
     for (const auto& [name, command] : text_commands) {
         embed.add_field(name, command.description, command.global);

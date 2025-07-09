@@ -18,7 +18,7 @@
 void guild::on_invite_created(const dpp::invite_create_t &event, const nlohmann::json& config, std::vector<dpp::invite>& invites) {
     invites.push_back(event.created_invite);
 
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::green).set_thumbnail(event.created_invite.inviter.get_avatar_url())
+    dpp::embed embed = dpp::embed().set_color(util::color::GREEN).set_thumbnail(event.created_invite.inviter.get_avatar_url())
                                    .set_title("Invite Created")
                                    .add_field("Invite Creator", event.created_invite.inviter.username, true)
                                    .add_field("User ID", event.created_invite.inviter.id.str(), true)
@@ -34,7 +34,7 @@ void guild::on_invite_created(const dpp::invite_create_t &event, const nlohmann:
 
 void guild::on_invite_deleted(const dpp::invite_delete_t &event, const nlohmann::json& config, std::vector<dpp::invite>& invites) {
 
-    dpp::embed embed = dpp::embed().set_color(dpp::colors::red).set_title("Invite Deleted");
+    dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Invite Deleted");
     // Find invite in cache
     auto invite = invites.begin();
     while (invite != invites.end() && invite->code != event.deleted_invite.code) ++invite;

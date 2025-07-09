@@ -198,6 +198,18 @@ namespace util {
     })
 
     /**
+     * Easier than remembering which specific color name to use
+     */
+    enum color : uint32_t {
+        GREEN = dpp::colors::medium_sea_green,
+        RED = dpp::colors::cinnabar,
+        MODERATOR_ROLE_COLOR = dpp::colors::moon_yellow,
+        TRIAL_MOD_ROLE_COLOR = dpp::colors::summer_sky,
+        SUPPORT_TEAM_ROLE_COLOR = 0x4DF352,
+        DEFAULT = 0x00A0A0
+    };
+
+    /**
      * Details for a user reminder
      */
     struct reminder {
