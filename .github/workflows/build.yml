@@ -31,10 +31,13 @@ jobs:
             c_compiler: cl
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout without vcpkg
+      id: lincheckout
+      if: ${{ runner.os == 'Linux' }}
+      uses: actions/checkout@v4
 
-    - name: Checkout vcpkg
-      id: submodule
+    - name: Checkout with vcpkg
+      id: wincheckout
       if: ${{ runner.os == 'Windows' }}
       uses: actions/checkout@v4
       with:

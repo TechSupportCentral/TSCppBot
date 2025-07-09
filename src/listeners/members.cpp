@@ -187,7 +187,7 @@ dpp::task<> members::on_member_edit(const dpp::guild_audit_log_entry_create_t& e
                     embed.add_field("New Nickname", change.new_value.substr(1, change.new_value.size() - 2), true);
                 }
                 embed.set_footer(dpp::embed_footer().set_text(std::string("User ID: ") + user.id.str()));
-                channel = config["log_channel_ids"]["name_changed"];
+                channel = config["log_channel_ids"]["name_changed"].get<dpp::snowflake>();
             } // other attributes can be added in the future
             if (channel != 0) {
                 event.owner->message_create(dpp::message(channel, embed));
