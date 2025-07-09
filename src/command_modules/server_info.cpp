@@ -40,6 +40,9 @@ void server_info::rule(const dpp::slashcommand_t &event, const nlohmann::json &c
 
 void server_info::suggest(const dpp::slashcommand_t &event, const nlohmann::json &config) {
     std::string suggestion = std::get<std::string>(event.get_parameter("suggestion"));
+    // Replace escaped newline "\n" with actual newline character
+    util::escape_newlines(suggestion);
+
     dpp::embed_author author(event.command.member.get_nickname(), "", event.command.member.get_avatar_url());
     dpp::embed embed = dpp::embed().set_color(dpp::colors::light_gray).set_author(author)
     .set_description(std::string("**Suggestion:** ") + suggestion).add_field("Status: Pending", "");
@@ -77,6 +80,8 @@ dpp::task<> server_info::suggestion_response(const dpp::slashcommand_t &event, c
         message.embeds[0].fields[0].name = "Status: Declined";
     }
     message.embeds[0].fields[0].value = std::get<std::string>(event.get_parameter("response"));
+    // Replace escaped newline "\\n" with actual newline character
+    util::escape_newlines(message.embeds[0].fields[0].value);
 
     event.owner->message_edit(message);
     co_await thinking;

@@ -261,6 +261,13 @@ namespace util {
     std::string sql_escape_string(std::string_view str, bool wrap_single_quotes = false);
 
     /**
+     * Replace literal "\n" in strings with actual newline character.
+     * This is needed for slash command parameters because Discord only allows one line in a parameter.
+     * @param str String to replace newlines in
+     */
+    void escape_newlines(std::string& str);
+
+    /**
      * Check if a string would be a valid Discord slash command name
      * @param command_name Proposed command name
      * @return true if the proposed command name is valid

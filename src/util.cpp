@@ -133,6 +133,18 @@ std::string util::sql_escape_string(const std::string_view str, const bool wrap_
     return escaped_str;
 }
 
+void util::escape_newlines(std::string& str) {
+    size_t pos = str.find("\\n");
+    while (pos != std::string::npos) {
+        // Don't replace if "\\n" is sent (double escape)
+        if (str[pos - 1] != '\\') {
+            str.replace(pos, 2, "\n");
+        }
+        // Find next occurence, if any
+        pos = str.find("\\n", pos + 1);
+    }
+}
+
 bool util::is_valid_command_name(const std::string_view command_name) {
     bool valid = true;
     for (char c : command_name) {

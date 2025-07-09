@@ -92,6 +92,8 @@ dpp::task<> db_commands::add_text_command(const dpp::form_submit_t &event, const
     command.description = std::get<std::string>(event.components[1].components[0].value);
     command.value = std::get<std::string>(event.components[2].components[0].value);
     command.global = (std::get<std::string>(event.components[3].components[0].value) == "true");
+    // Replace escaped newline "\n" in description with actual newline character
+    util::escape_newlines(command.description);
 
     // Build command SQL row
     std::string name = util::sql_escape_string(command_name);

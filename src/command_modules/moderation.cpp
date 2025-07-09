@@ -71,6 +71,8 @@ dpp::task<> moderation::purge(const dpp::slashcommand_t &event, const nlohmann::
                                       .add_field("In channel", channel.get_mention(), true);
     try {
         std::string reason = std::get<std::string>(event.get_parameter("reason"));
+        // Replace escaped newline "\\n" with actual newline character
+        util::escape_newlines(reason);
         embed.add_field("Reason", reason, false);
     } catch (const std::bad_variant_access&) {}
     event.owner->message_create(dpp::message(config["log_channel_ids"]["mod_log"], embed));
@@ -198,6 +200,8 @@ dpp::task<> moderation::warn(const dpp::slashcommand_t &event, const nlohmann::j
         co_return;
     }
     std::string reason = std::get<std::string>(event.get_parameter("reason"));
+    // Replace escaped newline "\\n" with actual newline character
+    util::escape_newlines(reason);
     // Check hierarchy
     if (! co_await util::check_perms(event.owner, config, event.command.get_issuing_user().id, user.user_id)) {
         co_await thinking;
@@ -256,6 +260,8 @@ dpp::task<> moderation::unwarn(const dpp::slashcommand_t &event, const nlohmann:
     // Send "thinking" response to allow time for DB operation
     dpp::async thinking = event.co_thinking(true);
     std::string reason = std::get<std::string>(event.get_parameter("reason"));
+    // Replace escaped newline "\\n" with actual newline character
+    util::escape_newlines(reason);
     // Get ID and make sure it's a number
     std::string id = std::get<std::string>(event.get_parameter("id"));
     if (std::ranges::any_of(id, [](const char& c){return !std::isdigit(c);})) {
@@ -364,6 +370,8 @@ dpp::task<> moderation::mute(const dpp::slashcommand_t &event, const nlohmann::j
     std::string reason;
     try {
         reason = std::get<std::string>(event.get_parameter("reason"));
+        // Replace escaped newline "\\n" with actual newline character
+        util::escape_newlines(reason);
     } catch (const std::bad_variant_access&) {
         reason = "No reason provided.";
     }
@@ -466,6 +474,8 @@ dpp::task<> moderation::unmute(const dpp::slashcommand_t &event, const nlohmann:
     std::string reason;
     try {
         reason = std::get<std::string>(event.get_parameter("reason"));
+        // Replace escaped newline "\\n" with actual newline character
+        util::escape_newlines(reason);
     } catch (const std::bad_variant_access&) {
         reason = "No reason provided.";
     }
@@ -551,6 +561,8 @@ dpp::task<> moderation::kick(const dpp::slashcommand_t &event, const nlohmann::j
     std::string reason;
     try {
         reason = std::get<std::string>(event.get_parameter("reason"));
+        // Replace escaped newline "\\n" with actual newline character
+        util::escape_newlines(reason);
     } catch (const std::bad_variant_access&) {
         reason = "No reason provided.";
     }
@@ -627,6 +639,8 @@ dpp::task<> moderation::ban(const dpp::slashcommand_t &event, const nlohmann::js
     std::string reason;
     try {
         reason = std::get<std::string>(event.get_parameter("reason"));
+        // Replace escaped newline "\\n" with actual newline character
+        util::escape_newlines(reason);
     } catch (const std::bad_variant_access&) {
         reason = "No reason provided.";
     }
@@ -720,6 +734,8 @@ dpp::task<> moderation::unban(const dpp::slashcommand_t &event, const nlohmann::
     std::string reason;
     try {
         reason = std::get<std::string>(event.get_parameter("reason"));
+        // Replace escaped newline "\\n" with actual newline character
+        util::escape_newlines(reason);
     } catch (const std::bad_variant_access&) {
         reason = "No reason provided.";
     }

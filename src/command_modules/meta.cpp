@@ -48,15 +48,7 @@ dpp::task<> meta::send_message(const dpp::slashcommand_t &event) {
     dpp::async thinking = event.co_thinking(true);
     // Replace escaped newline "\n" with actual newline character
     std::string message = std::get<std::string>(event.get_parameter("message"));
-    size_t pos = message.find("\\n");
-    while (pos < message.size() && pos != std::string::npos) {
-        // Don't replace if "\\n" is sent (double escape)
-        if (message[pos - 1] != '\\') {
-            message.replace(pos, 2, "\n");
-        }
-        // Find next occurence, if any
-        pos = message.find("\\n", pos + 1);
-    }
+    util::escape_newlines(message);
     // Send message
     dpp::confirmation_callback_t msg_conf = co_await event.owner->co_message_create(dpp::message(event.command.channel_id, message));
     co_await thinking;
@@ -72,15 +64,7 @@ dpp::task<> meta::announce(const dpp::slashcommand_t &event, const nlohmann::jso
     dpp::async thinking = event.co_thinking(true);
     // Replace escaped newline "\\n" with actual newline character
     std::string message = std::get<std::string>(event.get_parameter("message"));
-    size_t pos = message.find("\\n");
-    while (pos < message.size() && pos != std::string::npos) {
-        // Don't replace if "\\n" is sent (double escape)
-        if (message[pos - 1] != '\\') {
-            message.replace(pos, 2, "\n");
-        }
-        // Find next occurence, if any
-        pos = message.find("\\n", pos + 1);
-    }
+    util::escape_newlines(message);
 
     dpp::embed embed = dpp::embed().set_color(util::color::DEFAULT).
     set_description(message);
@@ -116,6 +100,9 @@ dpp::task<> meta::dm(const dpp::slashcommand_t &event, const nlohmann::json &con
     // Get user and message, construct embed, and send DM
     dpp::user user = event.command.get_resolved_user(std::get<dpp::snowflake>(event.get_parameter("user")));
     std::string message = std::get<std::string>(event.get_parameter("message"));
+    // Replace escaped newline "\\n" with actual newline character
+    util::escape_newlines(message);
+
     dpp::embed dm_embed = dpp::embed().set_color(util::color::DEFAULT).set_title("Message from the owners of TSC").set_description(message);
     dpp::confirmation_callback_t confirmation = co_await event.owner->co_direct_message_create(user.id, dpp::message(dm_embed));
     if (confirmation.is_error()) {
@@ -154,6 +141,8 @@ void meta::remindme(const dpp::slashcommand_t &event, sqlite3* db) {
     reminder.user = event.command.get_issuing_user().id;
     try {
         reminder.text = std::get<std::string>(event.get_parameter("reminder"));
+        // Replace escaped newline "\\n" with actual newline character
+        util::escape_newlines(reminder.text);
     } catch (const std::bad_variant_access&) {
         reminder.text = "No description provided.";
     }
