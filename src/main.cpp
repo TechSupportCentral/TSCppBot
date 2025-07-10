@@ -210,8 +210,10 @@ int main(int argc, char* argv[]) {
             util::log(dpp::utility::loglevel(event.severity), event.message);
         }
     });
+    // Keep track of bump timer
+    bool bump_timer_running = false;
 
-    bot.on_slashcommand([&config, &db_text_commands, &db_embed_commands, &db](const dpp::slashcommand_t &event) -> dpp::task<> {
+    bot.on_slashcommand([&config, &db_text_commands, &db_embed_commands, &db, &bump_timer_running](const dpp::slashcommand_t &event) -> dpp::task<> {
         std::string command_name = event.command.get_command_name();
         if (command_name == "add-text-command") db_commands::add_text_command_modal(event);
         else if (command_name == "add-embed-command") co_await db_commands::add_embed_command(event, config, db_embed_commands, db);
@@ -227,7 +229,7 @@ int main(int argc, char* argv[]) {
         else if (command_name == "announce") co_await meta::announce(event, config);
         else if (command_name == "dm") co_await meta::dm(event, config);
         else if (command_name == "remindme") meta::remindme(event, db);
-        else if (command_name == "set-bump-timer") meta::set_bump_timer(event, config);
+        else if (command_name == "set-bump-timer") meta::set_bump_timer(event, config, bump_timer_running);
         else if (command_name == "rules") server_info::rules(event, config);
         else if (command_name == "rule") server_info::rule(event, config);
         else if (command_name == "suggest") server_info::suggest(event, config);
@@ -281,8 +283,8 @@ int main(int argc, char* argv[]) {
     bot.on_automod_rule_update([&config, &automod_rules](const dpp::automod_rule_update_t &event) {
         automod_rules::on_automod_rule_edit(event, config, automod_rules);
     });
-    bot.on_message_create([&config](const dpp::message_create_t &event) {
-        messages::on_message(event, config);
+    bot.on_message_create([&config, &bump_timer_running](const dpp::message_create_t &event) {
+        messages::on_message(event, config, bump_timer_running);
     });
     bot.on_message_delete([&config](const dpp::message_delete_t &event) -> dpp::task<> {
         co_await messages::on_message_deleted(event, config);
@@ -378,8 +380,8 @@ int main(int argc, char* argv[]) {
                             tsc_commands.push_back(slash_command);
                             break;
                         case util::MOD_ONLY:
-                            // Only users with manage threads (moderators) can use the command
-                            slash_command.set_default_permissions(dpp::permissions::p_manage_threads);
+                            // Only users who can see the audit log (moderators) can use the command
+                            slash_command.set_default_permissions(dpp::permissions::p_view_audit_log);
                             tsc_commands.push_back(slash_command);
                             break;
                         case util::TRIAL_MOD_ONLY:

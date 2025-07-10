@@ -245,7 +245,7 @@ dpp::job util::remind(dpp::cluster* bot, sqlite3* db, const reminder reminder) {
     const time_t now = time(nullptr);
     if (reminder.end_time < now) {
         // If reminder end time has already passed, send the user a belated reminder notification
-        dpp::embed embed = dpp::embed().set_title("Belated Reminder").set_color(util::color::DEFAULT)
+        dpp::embed embed = dpp::embed().set_title("Belated Reminder").set_color(DEFAULT)
         .set_description(std::format("Sorry, the bot was offline when you were supposed to get your reminder of {} from <t:{}>.",
         seconds_to_fancytime(reminder.end_time - reminder.start_time, 4), reminder.start_time))
         .add_field("Reminder", reminder.text);
@@ -265,7 +265,7 @@ dpp::job util::remind(dpp::cluster* bot, sqlite3* db, const reminder reminder) {
     // Send user reminder notification
     dpp::embed embed = dpp::embed().set_title(std::format("Reminder of {} from <t:{}>",
     seconds_to_fancytime(reminder.end_time - reminder.start_time, 4),
-    reminder.start_time)).set_color(util::color::DEFAULT).set_description(reminder.text);
+    reminder.start_time)).set_color(DEFAULT).set_description(reminder.text);
     bot->direct_message_create(reminder.user, dpp::message(embed));
     // Remove reminder from DB
     char* error_message;
@@ -302,8 +302,8 @@ dpp::job util::handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json&
         co_return;
     }
     // Send user notification and log the unmute action
-    dpp::embed dm_embed = dpp::embed().set_color(util::color::GREEN).set_title("You have been automatically unmuted.");
-    dpp::embed log_embed = dpp::embed().set_color(util::color::GREEN).set_title("Mute removed").set_thumbnail(user.get_user()->get_avatar_url())
+    dpp::embed dm_embed = dpp::embed().set_color(GREEN).set_title("You have been automatically unmuted.");
+    dpp::embed log_embed = dpp::embed().set_color(GREEN).set_title("Mute removed").set_thumbnail(user.get_user()->get_avatar_url())
                                        .add_field("User unmuted", user.get_nickname(), true)
                                        .add_field("User ID", mute.user.str(), true)
                                        .add_field("Reason", "Automatic unmute", false);
@@ -314,10 +314,10 @@ dpp::job util::handle_mute(dpp::cluster* bot, sqlite3* db, const nlohmann::json&
     bot->message_create(dpp::message(config["log_channel_ids"]["mod_log"], log_embed));
 }
 
-dpp::job util::handle_bump(dpp::cluster* bot, const nlohmann::json& config, const dpp::snowflake channel, const time_t seconds) {
+dpp::job util::handle_bump(dpp::cluster* bot, const nlohmann::json& config, const dpp::snowflake channel, const time_t seconds, bool& bump_timer_running) {
     co_await bot->co_sleep(seconds);
     bot->message_create(dpp::message(channel, std::format("Time to bump the server!\n"
     "<@&{}>, could someone please run `/bump`?", config["role_ids"]["bump_reminder"].get<uint64_t>())
     ).set_allowed_mentions(false, true));
-    BUMP_TIMER_RUNNING = false;
+    bump_timer_running = false;
 }

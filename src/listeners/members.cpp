@@ -126,7 +126,7 @@ dpp::task<> members::on_join(const dpp::guild_member_add_t& event, const nlohman
     dpp::invite invite_used = co_await findinvite(event.owner, event.adding_guild.id, invites);
     if (invite_used.code != "unknown") {
         log_embed.add_field("Invite code", invite_used.code, false);
-        if (invite_used.code == "2vwUBmhM8U") {
+        if (invite_used.code == config["topgg_invite_code"].get<std::string>()) {
             log_embed.add_field("Invite creator", "top.gg", true);
         } else {
             log_embed.add_field("Invite creator", invite_used.inviter.username, true);

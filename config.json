@@ -47,6 +47,9 @@
     "bump_reminders": 878813488582111282,
     "ticket_create": 858255538190417991
   },
+  "disboard_bot_id": 302050872383242240,
+  "topgg_invite_code": "2vwUBmhM8U",
+  "ticket_auto_archive_mins": 10080,
   "rules": [
     "Be respectful to our Support Team; they provide support voluntarily for free during their own time.",
     "Profanity is not allowed on this server. If you send a message containing profanity, it will be deleted.",

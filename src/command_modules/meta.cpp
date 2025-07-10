@@ -168,8 +168,8 @@ void meta::remindme(const dpp::slashcommand_t &event, sqlite3* db) {
     "I will remind you in {} (<t:{}:F>).", fancytime, reminder.end_time)));
 }
 
-void meta::set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json &config) {
-    if (util::BUMP_TIMER_RUNNING) {
+void meta::set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json &config, bool& bump_timer_running) {
+    if (bump_timer_running) {
         event.reply(dpp::message("The bump timer is already running.").set_flags(dpp::m_ephemeral));
         return;
     }
@@ -181,7 +181,7 @@ void meta::set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json
         minutes = 120;
     }
     // Start timer and send confirmation
-    util::BUMP_TIMER_RUNNING = true;
-    util::handle_bump(event.owner, config, event.command.channel_id, minutes * 60LL);
+    bump_timer_running = true;
+    util::handle_bump(event.owner, config, event.command.channel_id, minutes * 60LL, bump_timer_running);
     event.reply(dpp::message(std::format("Timer set for {} minutes.", minutes)).set_flags(dpp::m_ephemeral));
 }

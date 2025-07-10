@@ -23,11 +23,6 @@ namespace util {
     inline std::ofstream LOG_FILE;
 
     /**
-     * Whether the bump timer is running
-     */
-    inline bool BUMP_TIMER_RUNNING = false;
-
-    /**
      * Ring buffer used to store the newest N objects of type T
      * @tparam T Type of element to store
      * @tparam N Size of buffer
@@ -326,6 +321,7 @@ namespace util {
      * @param config JSON bot config data
      * @param channel ID of channel to send reminder to
      * @param seconds Number of seconds to wait
+     * @param bump_timer_running Whether the bump timer is currently running
      */
-    dpp::job handle_bump(dpp::cluster* bot, const nlohmann::json& config, dpp::snowflake channel, time_t seconds);
+    dpp::job handle_bump(dpp::cluster* bot, const nlohmann::json& config, dpp::snowflake channel, time_t seconds, bool& bump_timer_running);
 }

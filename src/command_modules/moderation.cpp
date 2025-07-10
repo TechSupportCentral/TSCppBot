@@ -23,7 +23,7 @@ dpp::task<> moderation::create_ticket(const dpp::slashcommand_t &event, const nl
     std::string title = std::get<std::string>(event.get_parameter("title"));
     dpp::snowflake channel_id = config["log_channel_ids"]["tickets"];
     dpp::confirmation_callback_t confirmation = co_await event.owner->co_thread_create
-    (title, channel_id, 10080, dpp::CHANNEL_PRIVATE_THREAD, false, 0);
+    (title, channel_id, config["ticket_auto_archive_mins"], dpp::CHANNEL_PRIVATE_THREAD, false, 0);
     if (confirmation.is_error()) {
         co_await thinking;
         event.edit_original_response(dpp::message("Failed to create ticket channel."));

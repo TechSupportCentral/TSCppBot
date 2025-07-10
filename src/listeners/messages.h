@@ -24,7 +24,7 @@ namespace messages {
     void add_message_content_fields(dpp::embed& embed, const dpp::message& message);
 
     // Event handlers
-    void on_message(const dpp::message_create_t& event, const nlohmann::json& config);
+    void on_message(const dpp::message_create_t& event, const nlohmann::json& config, bool& bump_timer_running);
     dpp::task<> on_message_deleted(const dpp::message_delete_t& event, const nlohmann::json& config);
     dpp::task<> on_message_edited(const dpp::message_update_t& event, const nlohmann::json& config);
     dpp::task<> on_reaction(const dpp::message_reaction_add_t& event, const nlohmann::json& config);

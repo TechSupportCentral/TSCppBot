@@ -42,8 +42,7 @@ void messages::add_message_content_fields(dpp::embed& embed, const dpp::message&
     }
 }
 
-// TODO: Detect when the same message is posted in multiple support channels
-void messages::on_message(const dpp::message_create_t& event, const nlohmann::json& config) {
+void messages::on_message(const dpp::message_create_t& event, const nlohmann::json& config, bool& bump_timer_running) {
     util::MESSAGE_CACHE.push(event.msg);
     if (event.msg.author == event.owner->me) {
         return;
@@ -56,14 +55,14 @@ void messages::on_message(const dpp::message_create_t& event, const nlohmann::js
         // Send embed to log
         event.owner->message_create(dpp::message(config["log_channel_ids"]["bot_dm"], embed));
     // DISBOARD bump confirmation message
-    } else if (event.msg.author.id == 760604690010079282  && event.msg.embeds.size() == 1) {
-        if (event.msg.embeds[0].description.find(dpp::unicode_emoji::thumbsup) != std::string::npos) {
+    } else if (event.msg.author.id == config["disboard_bot_id"].get<dpp::snowflake>()  && event.msg.embeds.size() == 1) {
+        if (event.msg.embeds[0].description.find(":thumbsup:") != std::string::npos) {
             event.owner->message_create(dpp::message(event.msg.channel_id, dpp::embed()
                 .set_color(util::color::DEFAULT).set_title("Thank you for bumping the server!")
-                .set_description("Vote for Tech Support Central on top.gg at https://top.gg/servers/824042976371277884")));
-            if (!util::BUMP_TIMER_RUNNING) {
-                util::BUMP_TIMER_RUNNING = true;
-                util::handle_bump(event.owner, config, event.msg.channel_id, 7200);
+                .set_description("Vote for Tech Support Central on top.gg at https://top.gg/servers/" + event.msg.guild_id.str())));
+            if (!bump_timer_running) {
+                bump_timer_running = true;
+                util::handle_bump(event.owner, config, event.msg.channel_id, 7200, bump_timer_running);
             }
         }
     } else if (event.msg.content.find("need help") != std::string::npos) {
@@ -80,8 +79,6 @@ void messages::on_message(const dpp::message_create_t& event, const nlohmann::js
                 config["support_channel_ids"]["general_support"].get<uint64_t>(), config["role_ids"]["support_team"].get<uint64_t>()
             )).set_allowed_mentions(false));
         }
-    } else if (event.msg.content.find(" virus") != std::string::npos) {
-        event.reply("We suggest that you check for viruses and suspicious processes with Malwarebytes: https://malwarebytes.com/mwb-download");
     }
 }
 
