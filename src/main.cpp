@@ -245,7 +245,7 @@ int main(int argc, char* argv[]) {
         else if (command_name == "kick") co_await moderation::kick(event, config, db);
         else if (command_name == "ban") co_await moderation::ban(event, config, db);
         else if (command_name == "unban") co_await moderation::unban(event, config, db);
-        else if (command_name == "warnings") moderation::get_mod_actions(event, config, db);
+        else if (command_name == "warnings") moderation::get_mod_actions(event, db);
         else {
             auto text_command = db_text_commands.find(command_name);
             if (text_command != db_text_commands.end()) {
