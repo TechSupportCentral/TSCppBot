@@ -133,6 +133,10 @@ dpp::task<> members::on_join(const dpp::guild_member_add_t& event, const nlohman
         }
         log_embed.add_field("Invite uses", std::to_string(invite_used.uses), true);
     }
+    dpp::confirmation_callback_t role_conf = co_await event.owner->co_guild_member_add_role(event.adding_guild.id, event.added.user_id, config["role_ids"]["og"]);
+    if (role_conf.is_error()) {
+        log_embed.set_footer(dpp::embed_footer().set_text(std::format("Failed to add <@&{}> role", config["role_ids"]["id"].get<uint64_t>())));
+    }
     event.owner->message_create(dpp::message(config["log_channel_ids"]["member_log"], log_embed));
 }
 

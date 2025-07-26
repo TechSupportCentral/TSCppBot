@@ -665,7 +665,9 @@ dpp::task<> moderation::ban(const dpp::slashcommand_t &event, const nlohmann::js
     }
 
     // Create ban message and send DM to user
-    dpp::embed dm_embed = dpp::embed().set_color(util::color::RED).set_title("You have been banned.").add_field("Reason", reason, false);
+    dpp::embed dm_embed = dpp::embed().set_color(util::color::RED).set_title("You have been banned.")
+                                      .add_field("Reason", reason, false)
+                                      .set_footer(dpp::embed_footer().set_text("You can appeal your ban at https://www.techsupportcentral.org/appeal.php."));
     dpp::confirmation_callback_t dm_conf = co_await event.owner->co_direct_message_create(user.id, dpp::message(dm_embed));
     // Ban user
     dpp::confirmation_callback_t ban_conf = co_await event.owner->co_guild_ban_add(config["guild_id"], user.id, seconds);
@@ -803,7 +805,7 @@ dpp::task<> moderation::unban(const dpp::slashcommand_t &event, const nlohmann::
     event.edit_original_response(dpp::message("Ban removed successfully."));
 }
 
-void moderation::get_mod_actions(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db) {
+void moderation::get_mod_actions(const dpp::slashcommand_t &event, sqlite3* db) {
     // Send "thinking" response to allow time for DB operation
     event.thinking();
     dpp::user user = event.command.get_resolved_user(std::get<dpp::snowflake>(event.get_parameter("user")));

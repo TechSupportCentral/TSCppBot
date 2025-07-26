@@ -28,5 +28,5 @@ namespace moderation {
     dpp::task<> kick(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
     dpp::task<> ban(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
     dpp::task<> unban(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
-    void get_mod_actions(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
+    void get_mod_actions(const dpp::slashcommand_t &event, sqlite3* db);
 }
