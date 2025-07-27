@@ -169,11 +169,15 @@ dpp::task<> moderation::inviteinfo(const dpp::slashcommand_t &event) {
                                    .set_title("Invite to " + invite.destination_guild.name)
                                    .add_field("Members total", std::to_string(invite.approximate_member_count), true)
                                    .add_field("Members online", std::to_string(invite.approximate_presence_count), true)
-                                   .add_field("Invite creator", invite.inviter.username, false)
-                                   .add_field("Server ID", invite.guild_id.str(), true)
-                                   .add_field("Channel name", invite.destination_channel.name, true)
-                                   .add_field("Invite uses", std::to_string(invite.uses), false)
+                                   .add_field("Server ID", invite.guild_id.str(), false)
+                                   .add_field("Invite uses", std::to_string(invite.uses), true)
                                    .set_timestamp(invite.created_at);
+    if (invite.channel_id != 0) {
+        embed.add_field("Channel name", invite.destination_channel.name, true);
+    }
+    if (invite.inviter_id != 0) {
+        embed.add_field("Invite creator", invite.inviter.username, false);
+    }
     if (invite.expires_at == 0) {
         embed.add_field("Expires", "Never", false);
     } else {

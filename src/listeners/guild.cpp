@@ -17,13 +17,19 @@
 
 void guild::on_invite_created(const dpp::invite_create_t &event, const nlohmann::json& config, std::vector<dpp::invite>& invites) {
     invites.push_back(event.created_invite);
+    // Don't log invites without a known creator
+    if (event.created_invite.inviter_id == 0) {
+        return;
+    }
 
     dpp::embed embed = dpp::embed().set_color(util::color::GREEN).set_thumbnail(event.created_invite.inviter.get_avatar_url())
                                    .set_title("Invite Created")
                                    .add_field("Invite Creator", event.created_invite.inviter.username, true)
                                    .add_field("User ID", event.created_invite.inviter.id.str(), true)
-                                   .add_field("Invite Code", event.created_invite.code, false)
-                                   .add_field("Invite Channel", event.created_invite.destination_channel.get_mention(), true);
+                                   .add_field("Invite Code", event.created_invite.code, false);
+    if (event.created_invite.channel_id != 0) {
+        embed.add_field("Invite Channel", event.created_invite.destination_channel.get_mention(), true);
+    }
     if (event.created_invite.expires_at == 0) {
         embed.add_field("Expires", "Never", true);
     } else {
@@ -33,7 +39,6 @@ void guild::on_invite_created(const dpp::invite_create_t &event, const nlohmann:
 }
 
 void guild::on_invite_deleted(const dpp::invite_delete_t &event, const nlohmann::json& config, std::vector<dpp::invite>& invites) {
-
     dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Invite Deleted");
     // Find invite in cache
     auto invite = invites.begin();
@@ -45,10 +50,15 @@ void guild::on_invite_deleted(const dpp::invite_delete_t &event, const nlohmann:
         embed.add_field("Invite Creator", invite->inviter.username, true)
              .add_field("User ID", invite->inviter.id.str(), true)
              .add_field("Invite Code", invite->code, false)
-             .add_field("Invite Channel", invite->destination_channel.get_mention(), true)
              .add_field("Uses", std::to_string(invite->uses), true);
+        if (invite->channel_id != 0) {
+            embed.add_field("Invite Channel", invite->destination_channel.get_mention(), true);
+        }
         // Delete invite from cache
         invites.erase(invite);
     }
-    event.owner->message_create(dpp::message(config["log_channel_ids"]["invites"], embed));
+    // Don't log invites without a known creator
+    if (!embed.fields[0].value.empty()) {
+        event.owner->message_create(dpp::message(config["log_channel_ids"]["invites"], embed));
+    }
 }

@@ -82,6 +82,7 @@ void messages::on_message(const dpp::message_create_t& event, const nlohmann::js
     }
 }
 
+// TODO: cache images sent in deleted messages
 dpp::task<> messages::on_message_deleted(const dpp::message_delete_t& event, const nlohmann::json& config) {
     dpp::confirmation_callback_t msg_conf = co_await util::get_message_cached(event.owner, event.id, event.channel_id);
     dpp::embed embed = dpp::embed().set_color(util::color::RED).set_title("Message Deleted")
@@ -178,7 +179,7 @@ dpp::task<> messages::on_reaction(const dpp::message_reaction_add_t& event, cons
         std::string title = std::string("Ticket for ") + event.reacting_user.username;
         dpp::snowflake channel_id = config["log_channel_ids"]["tickets"];
         dpp::confirmation_callback_t confirmation = co_await event.owner->co_thread_create
-        (title, channel_id, 10080, dpp::CHANNEL_PRIVATE_THREAD, false, 0);
+        (title, channel_id, config["ticket_auto_archive_mins"], dpp::CHANNEL_PRIVATE_THREAD, false, 0);
         if (confirmation.is_error()) {
             event.owner->direct_message_create(event.reacting_user.id, dpp::message("Failed to create ticket channel."));
         }
