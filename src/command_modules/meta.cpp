@@ -16,8 +16,7 @@
 #include "../util.h"
 
 void meta::ping(const dpp::slashcommand_t &event) {
-    // TODO: Figure out why this is returning 0 ms
-    event.reply(std::format("Pong! {}ms", event.from()->websocket_ping / 1000));
+    event.reply(std::format("Pong! {}ms", event.from()->websocket_ping * 1000));
 }
 
 void meta::uptime(const dpp::slashcommand_t &event) {
