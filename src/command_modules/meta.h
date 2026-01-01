@@ -25,4 +25,6 @@ namespace meta {
     dpp::task<> announce(const dpp::slashcommand_t &event, const nlohmann::json &config);
     void remindme(const dpp::slashcommand_t &event, sqlite3* db);
     void set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json &config, bool& bump_timer_running);
+    void appeal_respond(const dpp::slashcommand_t &event, sqlite3* db);
+    dpp::task<> application_respond(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db);
 }

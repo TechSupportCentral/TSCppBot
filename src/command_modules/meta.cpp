@@ -16,7 +16,7 @@
 #include "../util.h"
 
 void meta::ping(const dpp::slashcommand_t &event) {
-    event.reply(std::format("Pong! {}ms", event.from()->websocket_ping * 1000));
+    event.reply(std::format("Pong! {:.4g} ms", event.from()->websocket_ping * 1000));
 }
 
 void meta::uptime(const dpp::slashcommand_t &event) {
@@ -183,4 +183,134 @@ void meta::set_bump_timer(const dpp::slashcommand_t &event, const nlohmann::json
     bump_timer_running = true;
     util::handle_bump(event.owner, config, event.command.channel_id, minutes * 60LL, bump_timer_running);
     event.reply(dpp::message(std::format("Timer set for {} minutes.", minutes)).set_flags(dpp::m_ephemeral));
+}
+
+void meta::appeal_respond(const dpp::slashcommand_t &event, sqlite3* db) {
+    // Send "thinking" response to allow time for DB operation
+    event.thinking(true);
+    const std::string id = std::get<std::string>(event.get_parameter("id"));
+    std::string status;
+    if (std::get<bool>(event.get_parameter("response"))) {
+        status = "accepted";
+    } else {
+        status = "rejected";
+    }
+    std::pair<int64_t, std::string> callback_data;
+    callback_data.first = 0;
+    char* error_message;
+    sqlite3_exec(db, std::format("SELECT rowid, email FROM ban_appeals WHERE id='{}' AND status='pending';", id).c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto data = static_cast<std::pair<int64_t, std::string>*>(output);
+            data->first = strtoll(column_values[0], nullptr, 10);
+            data->second.append(column_values[1]);
+            return 0;
+        },
+    &callback_data, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message("Failed to get appeals from DB."));
+        return;
+    }
+    if (callback_data.first == 0) {
+        event.edit_original_response(dpp::message("The user does not have any pending ban appeals."));
+        return;
+    }
+    sqlite3_exec(db, std::format("UPDATE ban_appeals SET status = '{}' WHERE rowid = {};", status, callback_data.first).c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        event.edit_original_response(dpp::message("Failed to set appeal status in DB."));
+        return;
+    }
+    event.edit_original_response(dpp::message(std::format("The appeal was marked as {}. Remember to send an email to `{}` to notify the user.", status, callback_data.second)));
+}
+
+dpp::task<> meta::application_respond(const dpp::slashcommand_t &event, const nlohmann::json &config, sqlite3* db) {
+    // Send "thinking" response to allow time for Discord API
+    dpp::async thinking = event.co_thinking(true);
+    const std::string id = std::get<std::string>(event.get_parameter("id"));
+    std::string status;
+    if (std::get<bool>(event.get_parameter("response"))) {
+        status = "accepted";
+    } else {
+        status = "rejected";
+    }
+    std::pair<int64_t, bool> callback_data;
+    callback_data.first = 0;
+    char* error_message;
+    sqlite3_exec(db, std::format("SELECT rowid, type FROM staff_applications WHERE id='{}' AND status='pending';", id).c_str(),
+        [](void* output, int column_count, char** column_values, char** column_names) -> int {
+            auto data = static_cast<std::pair<int64_t, bool>*>(output);
+            data->first = strtoll(column_values[0], nullptr, 10);
+            data->second = strcmp(column_values[1], "mod");
+            return 0;
+        },
+    &callback_data, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        co_await thinking;
+        event.edit_original_response(dpp::message("Failed to get staff applications from DB."));
+        co_return;
+    }
+    if (callback_data.first == 0) {
+        co_await thinking;
+        event.edit_original_response(dpp::message("The user does not have any pending staff applications."));
+        co_return;
+    }
+    sqlite3_exec(db, std::format("UPDATE staff_applications SET status = '{}' WHERE rowid = {};", status, callback_data.first).c_str(), nullptr, nullptr, &error_message);
+    if (error_message != nullptr) {
+        util::log("SQL ERROR", error_message);
+        sqlite3_free(error_message);
+        co_await thinking;
+        event.edit_original_response(dpp::message("Failed to set application status in DB."));
+        co_return;
+    }
+    if (status == "accepted") {
+        // Get user
+        dpp::confirmation_callback_t user_conf = co_await event.owner->co_user_get_cached(id);
+        if (user_conf.is_error()) {
+            co_await thinking;
+            event.edit_original_response(dpp::message("Failed to get user."));
+            co_return;
+        }
+        dpp::user_identified user = std::get<dpp::user_identified>(user_conf.value);
+
+        // Add role
+        dpp::snowflake role;
+        if (callback_data.second) {
+            role = config["role_ids"]["support_team"];
+        } else {
+            role = config["role_ids"]["trial_mod"];
+        }
+        dpp::confirmation_callback_t role_add_conf = co_await event.owner->co_guild_member_add_role(config["guild_id"], id, role);
+        if (role_add_conf.is_error()) {
+            co_await thinking;
+            event.edit_original_response(dpp::message("Failed to add new staff role to user."));
+            co_return;
+        }
+
+        // Send notification
+        uint32_t color;
+        std::string message;
+        if (callback_data.second) {
+            color = util::color::SUPPORT_TEAM_ROLE_COLOR;
+            message = "Congratulations, your Support Team application has been accepted. You should now have the Support Team role, which will give you access to staff channels, as well as a *lot* more notifications.";
+        } else {
+            color = util::color::TRIAL_MOD_ROLE_COLOR;
+            message = "Congratulations, your Moderator application has been accepted. You should now have the Trial Moderator role, which gives you permission to delete messages, change nicknames, and warn and mute users.";
+        }
+        dpp::embed embed = dpp::embed().set_color(color).set_title("Application Accepted").set_description(message);
+        dpp::confirmation_callback_t confirmation = co_await event.owner->co_direct_message_create(user.id, dpp::message(embed));
+        co_await thinking;
+        if (confirmation.is_error()) {
+            event.edit_original_response(dpp::message(std::string("Failed to notify user: ") + confirmation.get_error().human_readable));
+        } else {
+            event.edit_original_response(dpp::message("The application has been accepted."));
+        }
+    } else {
+        co_await thinking;
+        event.edit_original_response(dpp::message("The application was marked as rejected."));
+    }
 }

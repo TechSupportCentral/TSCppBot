@@ -230,6 +230,8 @@ int main(int argc, char* argv[]) {
         else if (command_name == "dm") co_await meta::dm(event, config);
         else if (command_name == "remindme") meta::remindme(event, db);
         else if (command_name == "set-bump-timer") meta::set_bump_timer(event, config, bump_timer_running);
+        else if (command_name == "appeal-respond") meta::appeal_respond(event, db);
+        else if (command_name == "application-respond") co_await meta::application_respond(event, config, db);
         else if (command_name == "rules") server_info::rules(event, config);
         else if (command_name == "rule") server_info::rule(event, config);
         else if (command_name == "suggest") server_info::suggest(event, config);

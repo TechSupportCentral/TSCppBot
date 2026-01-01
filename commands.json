@@ -113,6 +113,46 @@
         }
       ],
       "permission_level": "admin"
+    },
+    {
+      "name": "appeal-respond",
+      "description": "Respond to a ban appeal",
+      "options": [
+        {
+          "name": "id",
+          "description": "ID of user who submitted the appeal",
+          "type": 3,
+          "required": true,
+          "max_length": 20
+        },
+        {
+          "name": "response",
+          "description": "Accept the ban appeal?",
+          "type": 5,
+          "required": true
+        }
+      ],
+      "permission_level": "admin"
+    },
+    {
+      "name": "application-respond",
+      "description": "Respond to a staff application",
+      "options": [
+        {
+          "name": "id",
+          "description": "ID of user who submitted the application",
+          "type": 3,
+          "required": true,
+          "max_length": 20
+        },
+        {
+          "name": "response",
+          "description": "Accept the application?",
+          "type": 5,
+          "required": true
+        }
+      ],
+      "permission_level": "admin"
     }
   ],
   "moderation": [
