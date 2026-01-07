@@ -280,9 +280,9 @@ dpp::task<> meta::application_respond(const dpp::slashcommand_t &event, const nl
         // Add role
         dpp::snowflake role;
         if (callback_data.second) {
-            role = config["role_ids"]["support_team"];
+            role = config["role_ids"]["support_team"].get<dpp::snowflake>();
         } else {
-            role = config["role_ids"]["trial_mod"];
+            role = config["role_ids"]["trial_mod"].get<dpp::snowflake>();
         }
         dpp::confirmation_callback_t role_add_conf = co_await event.owner->co_guild_member_add_role(config["guild_id"], id, role);
         if (role_add_conf.is_error()) {

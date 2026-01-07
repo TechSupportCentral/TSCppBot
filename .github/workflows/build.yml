@@ -1,22 +1,18 @@
 name: CMake Build
-
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
-
       matrix:
         os: [ubuntu-latest, windows-latest]
-        build_type: [Debug]
         c_compiler: [gcc, cl]
+        # Use gcc on Linux and MSVC on Windows
         include:
           - os: windows-latest
             c_compiler: cl
@@ -32,12 +28,10 @@ jobs:
 
     steps:
     - name: Checkout without vcpkg
-      id: lincheckout
       if: ${{ runner.os == 'Linux' }}
       uses: actions/checkout@v4
 
     - name: Checkout with vcpkg
-      id: wincheckout
       if: ${{ runner.os == 'Windows' }}
       uses: actions/checkout@v4
       with:
@@ -47,9 +41,10 @@ jobs:
       id: depends
       if: ${{ runner.os == 'Linux' }}
       shell: bash
+      # Install dpp from BenTheTechGuy repo until Ubuntu 26.04 LTS is released
       run: |
         sudo wget https://apt.benthetechguy.net/benthetechguy-archive-keyring.gpg -O /usr/share/keyrings/benthetechguy-archive-keyring.gpg
-        echo "deb [signed-by=/usr/share/keyrings/benthetechguy-archive-keyring.gpg] https://apt.benthetechguy.net/debian testing main contrib non-free" | sudo tee /etc/apt/sources.list.d/benthetechguy.list
+        echo "deb [signed-by=/usr/share/keyrings/benthetechguy-archive-keyring.gpg] https://apt.benthetechguy.net/debian trixie main" | sudo tee /etc/apt/sources.list.d/benthetechguy.list
         sudo apt-get update
         sudo apt-get install libdpp-dev libsqlite3-dev pkgconf
 
@@ -64,7 +59,7 @@ jobs:
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_BUILD_TYPE=Debug
         -S ${{ github.workspace }}
 
     - name: Build
